@@ -1,62 +1,65 @@
 package com.example.bulksmsAPI.Config;
 
-import com.example.bulksmsAPI.Security.JwtAuthenticationFilter;
-import com.example.bulksmsAPI.Security.JwtAuthorizationFilter;
-import jakarta.servlet.Filter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import com.example.bulksmsAPI.Repositories.UserRepository; // Your user repository
+import com.example.bulksmsAPI.Models.User; // Your user model
 
 @Configuration
-@EnableWebSecurity
 public class SecurityConfig {
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
 
     @Autowired
-    private JwtAuthorizationFilter jwtAuthorizationFilter;
+    private UserRepository userRepository; // Inject your UserRepository
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return email -> { // Use email as the username
+            User user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            if (user == null) {
+                throw new UsernameNotFoundException("User not found");
+            }
+            return new org.springframework.security.core.userdetails.User( // Create UserDetails object
+                    user.getEmail(), // Username (email)
+                    user.getPassword(),
+                    AuthorityUtils.NO_AUTHORITIES // Or get authorities from user.getRoles() if you have roles
+            );
+        };
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+        return http
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/operator/**").hasRole("OPERATOR")
-                        .requestMatchers("/client/**").hasRole("CLIENT")
+                        .requestMatchers("/api/auth/**").permitAll() // Example
                         .anyRequest().authenticated()
                 )
-                .addFilter((Filter) new JwtAuthenticationFilter(authenticationManager(http)))
-                .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        return http.build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder())
                 .build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService) {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return new ProviderManager(authProvider);
     }
 }

@@ -1,38 +1,29 @@
-package com.example.bulksmsAPI.Models;
+package com.example.bulksmsAPI.Models.DTO;
 
-
+import com.example.bulksmsAPI.Models.Contacts;
+import com.example.bulksmsAPI.Models.User;
 import jakarta.persistence.*;
-import lombok.*;
 
-@Entity
-@Table(name = "contacts")
-
-@NoArgsConstructor
-@AllArgsConstructor
-public class Contacts {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ContactsDTO {
     private Long contact_id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(name = "`group`") // Usar comillas invertidas para evitar conflictos con palabras reservadas
     private String group;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
     private User usuario;
-    public Long getId() {
+
+    public ContactsDTO(Contacts contact) {
+    }
+
+    public Long getContact_id() {
         return contact_id;
     }
 
-    public void setId(Long id) {
-        this.contact_id = id;
+    public void setContact_id(Long contact_id) {
+        this.contact_id = contact_id;
     }
 
     public String getName() {
@@ -67,4 +58,3 @@ public class Contacts {
         this.usuario = usuario;
     }
 }
-

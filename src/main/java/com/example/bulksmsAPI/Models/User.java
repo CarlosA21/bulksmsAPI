@@ -3,47 +3,43 @@ package com.example.bulksmsAPI.Models;
 
 import jakarta.persistence.*;
 
+import lombok.*;
+
 import java.util.List;
-import java.util.Set;
 
 @Entity
+@Table(name = "User")
+
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 
-    private Long id;
-    private String username;
+    private Long user_id;
+    private String email;
     private String password;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
+    private String roles;
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Contacts> contactos;
+    private List<Contacts> contacts;
+
 
     public Long getId() {
-        return id;
+        return user_id;
     }
 
     public void setId(Long id) {
-        this.id = id;
+        this.user_id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPassword() {
@@ -52,5 +48,21 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public List<Contacts> getContactos() {
+        return contacts;
+    }
+
+    public void setContactos(List<Contacts> contactos) {
+        this.contacts = contactos;
+    }
+
+    public int getCredits() {
+        return Credits;
+    }
+
+    public void setCredits(int credits) {
+        Credits = credits;
     }
 }
