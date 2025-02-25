@@ -5,18 +5,27 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-
+@Entity
+@Table(name = "transactions")
 public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Se relaciona con la cuenta de créditos del usuario.
     @ManyToOne
+    @JoinColumn(name = "credit_account_id")
     private CreditAccount creditAccount;
 
-    private String type; // "PURCHASE" o "USAGE"
+    // Tipo de transacción: "PURCHASE" o "USAGE"
+    private String type;
+
+    // Cantidad de créditos involucrados.
     private int credits;
+
+    // Fecha y hora de la transacción.
     private LocalDateTime date;
+
 
     public CreditAccount getCreditAccount() {
         return creditAccount;

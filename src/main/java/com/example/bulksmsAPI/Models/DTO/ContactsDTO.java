@@ -1,11 +1,14 @@
 package com.example.bulksmsAPI.Models.DTO;
 
-import com.example.bulksmsAPI.Models.Contacts;
 import com.example.bulksmsAPI.Models.User;
-import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ContactsDTO {
-    private Long contact_id;
 
     private String name;
 
@@ -13,18 +16,8 @@ public class ContactsDTO {
 
     private String group;
 
-    private User usuario;
+    private UserDTO usuario;
 
-    public ContactsDTO(Contacts contact) {
-    }
-
-    public Long getContact_id() {
-        return contact_id;
-    }
-
-    public void setContact_id(Long contact_id) {
-        this.contact_id = contact_id;
-    }
 
     public String getName() {
         return name;
@@ -50,11 +43,5 @@ public class ContactsDTO {
         this.group = group;
     }
 
-    public User getUsuario() {
-        return usuario;
-    }
 
-    public void setUsuario(User usuario) {
-        this.usuario = usuario;
-    }
 }

@@ -6,13 +6,22 @@ import com.example.bulksmsAPI.Models.Contacts;
 import java.util.List;
 
 public class UserDTO {
-
+    private String username;
     private String email;
     private String password;
     private List<Contacts> contacts;
 
     private int Credits;
     private String roles;
+
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
     public String getEmail() {
         return email;

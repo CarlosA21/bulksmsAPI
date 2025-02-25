@@ -5,37 +5,39 @@ import com.example.bulksmsAPI.Models.Contacts;
 import com.example.bulksmsAPI.Models.DTO.ContactsDTO;
 import com.example.bulksmsAPI.Models.User;
 import com.example.bulksmsAPI.Services.ContactsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/contactos")
+@RequestMapping("/api/contacts")
 public class ContactsController {
     @Autowired
-    private ContactsService contactoService;
+    private ContactsService contactsService;
 
     @PostMapping
-    public ContactsDTO agregarContacto(@AuthenticationPrincipal User user, @RequestBody ContactsDTO contactsDTO) {
-        Contacts contact = contactoService.addContacts(user.getId(), contactsDTO);
-        return new ContactsDTO(contact);
+    public Contacts addContacts(@RequestBody ContactsDTO contactsDTO) {
+        return contactsService.addContacts(contactsDTO);
     }
 
-    @GetMapping
-    public List<Contacts> listarContactos(@AuthenticationPrincipal User User) {
-        return contactoService.listContacts(User.getId());
+    @GetMapping("/user/{usuarioId}")
+    public ResponseEntity<List<Contacts>> getContactsByUser(@PathVariable Long usuarioId) {
+        List<Contacts> contacts = contactsService.listContacts(usuarioId);
+        return ResponseEntity.ok(contacts);
     }
+
 
     @PutMapping("/{contactoId}")
     public void updateContact(@AuthenticationPrincipal User User, @PathVariable Long contactoId, @RequestBody ContactsDTO contactsDTO) {
-        contactoService.updateContacts(contactoId, contactsDTO);
+        contactsService.updateContacts(contactoId, contactsDTO);
     }
 
     @DeleteMapping("/{contactoId}")
-    public void eliminarContact(@AuthenticationPrincipal User User, @PathVariable Long contactoId) {
-        contactoService.deleteContacts(contactoId);
+    public void deleteContact(@AuthenticationPrincipal User User, @PathVariable Long contactoId) {
+        contactsService.deleteContacts(contactoId);
     }
 
 

@@ -2,24 +2,38 @@ package com.example.bulksmsAPI.Services;
 
 import com.example.bulksmsAPI.Models.Contacts;
 import com.example.bulksmsAPI.Models.DTO.ContactsDTO;
+import com.example.bulksmsAPI.Models.DTO.UserDTO;
 import com.example.bulksmsAPI.Models.User;
 import com.example.bulksmsAPI.Repositories.ContactsRepository;
 import com.example.bulksmsAPI.Repositories.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook; // For .xls files
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException; // Import for better exception handling
+
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ContactsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ContactsService.class);
+
     @Autowired
     private ContactsRepository contactsRepository; // Corrected variable name for consistency
 
@@ -27,13 +41,31 @@ public class ContactsService {
     private UserRepository userRepository; // Corrected variable name for consistency
 
 
-    public Contacts addContacts(Long usuarioId, ContactsDTO contactsDTO) {
-        User usuario = userRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("User Not Found"));
 
-        // Convert ContactsDTO to Contacts entity
+    public Contacts addContacts(ContactsDTO contactsDTO) {
+        // Get the authenticated user from Spring Security Context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new SecurityException("User is not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+        String email;
+
+        if (principal instanceof UserDetails) {
+            email = ((UserDetails) principal).getUsername();  // Get email/username
+        } else {
+            throw new SecurityException("Invalid authentication principal");
+        }
+
+        // Fetch the User entity from the database
+        User usuario = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Create and save the contact
         Contacts contact = new Contacts();
-        contact.setId(usuarioId);
+        contact.setUsuario(usuario);
         contact.setName(contactsDTO.getName());
         contact.setPhoneNumber(contactsDTO.getPhoneNumber());
         contact.setGroup(contactsDTO.getGroup());

@@ -13,12 +13,14 @@ public class CreditAccount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Cada usuario tiene una única cuenta de créditos.
     @OneToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
-    private int balance; // Créditos disponibles
+    private int balance = 0; // Saldo inicial
 
-    @OneToMany(mappedBy = "creditAccount", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "creditAccount", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Transaction> transactions;
 
     public Long getId() {
@@ -51,5 +53,16 @@ public class CreditAccount {
 
     public void setTransactions(List<Transaction> transactions) {
         this.transactions = transactions;
+    }
+
+    public void addCredits(int credits) {
+        this.balance += credits;
+    }
+
+    public void subtractCredits(int credits) {
+        if (this.balance < credits) {
+            throw new RuntimeException("Saldo insuficiente");
+        }
+        this.balance -= credits;
     }
 }

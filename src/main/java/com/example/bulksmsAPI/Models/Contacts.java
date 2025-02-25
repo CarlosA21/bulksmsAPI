@@ -27,6 +27,7 @@ public class Contacts {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User usuario;
+
     public Long getId() {
         return contact_id;
     }
