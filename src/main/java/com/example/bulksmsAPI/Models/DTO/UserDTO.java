@@ -1,6 +1,7 @@
 package com.example.bulksmsAPI.Models.DTO;
 
 
+import com.example.bulksmsAPI.Models.BillingAddress;
 import com.example.bulksmsAPI.Models.Contacts;
 
 import java.util.List;
@@ -9,10 +10,13 @@ public class UserDTO {
     private String username;
     private String email;
     private String password;
+
+    private String driverLicense;
     private List<Contacts> contacts;
 
     private int Credits;
     private String roles;
+    private BillingAddress billingAddress;
 
 
     public String getUsername() {
@@ -61,5 +65,21 @@ public class UserDTO {
 
     public void setRoles(String roles) {
         this.roles = roles;
+    }
+
+    public String getDriverLicense() {
+        return driverLicense;
+    }
+
+    public void setDriverLicense(String driverLicense) {
+        this.driverLicense = driverLicense;
+    }
+
+    public BillingAddress getBillingAddress() {
+        return billingAddress;
+    }
+
+    public void setBillingAddress(BillingAddress billingAddress) {
+        this.billingAddress = billingAddress;
     }
 }

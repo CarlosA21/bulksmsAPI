@@ -18,7 +18,7 @@ public class ContactsController {
     @Autowired
     private ContactsService contactsService;
 
-    @PostMapping
+    @PostMapping("/add")
     public Contacts addContacts(@RequestBody ContactsDTO contactsDTO) {
         return contactsService.addContacts(contactsDTO);
     }
@@ -30,7 +30,7 @@ public class ContactsController {
     }
 
 
-    @PutMapping("/{contactoId}")
+    @PutMapping("/edit/{contactoId}")
     public void updateContact(@AuthenticationPrincipal User User, @PathVariable Long contactoId, @RequestBody ContactsDTO contactsDTO) {
         contactsService.updateContacts(contactoId, contactsDTO);
     }
@@ -39,6 +39,5 @@ public class ContactsController {
     public void deleteContact(@AuthenticationPrincipal User User, @PathVariable Long contactoId) {
         contactsService.deleteContacts(contactoId);
     }
-
 
 }

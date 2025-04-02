@@ -71,6 +71,7 @@ public class PayPalService {
         List<Transaction> transactions = new ArrayList<>();
         transactions.add(transaction);
 
+
         Payer payer = new Payer();
         payer.setPaymentMethod("paypal");
 

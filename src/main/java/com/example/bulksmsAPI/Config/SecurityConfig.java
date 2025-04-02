@@ -37,12 +37,21 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/paypal/success").authenticated()
-                        .requestMatchers("/api/paypal/cancel").authenticated()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
+                        .requestMatchers("/api/auth/google").permitAll()
+                        .requestMatchers("/api/auth/find-user/**").authenticated()
+                        .requestMatchers("/api/paypal/success").permitAll()
+                        .requestMatchers("/api/paypal/payment-success-callback/**").authenticated() // Permit this path
+                        .requestMatchers("/api/paypal/transactions/**").authenticated() // Permit this path
+                        .requestMatchers("/api/paypal/stripe-success").permitAll()
+                        .requestMatchers("/api/paypal/cancel").permitAll()
                         .requestMatchers("/api/paypal/**").authenticated()
                         .requestMatchers("/api/contacts").authenticated()
-                        .requestMatchers("/api/contacts/user/**").authenticated()
+                        .requestMatchers("/api/contacts/edit/**").authenticated()
+                        .requestMatchers("/api/message/user/**").authenticated()
+
+                        .requestMatchers("/api/message/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

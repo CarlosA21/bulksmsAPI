@@ -1,6 +1,7 @@
 package com.example.bulksmsAPI.Models;
 
 
+import com.example.bulksmsAPI.Security.EncryptionUtil;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -27,12 +29,20 @@ public class User implements UserDetails {
     private String password;
     private String roles;
 
+    @Column(name = "driver_license", nullable = false)
+    private String driverLicense;
+    private Date dob;
+
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Contacts> contacts;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private CreditAccount creditAccount;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private BillingAddress billingAddress;
 
 
     @Override
@@ -121,4 +131,27 @@ public class User implements UserDetails {
         creditAccount.setUser(this);
     }
 
+    public String getDriverLicense() {
+        try {
+            return EncryptionUtil.decrypt(this.driverLicense);
+        } catch (Exception e) {
+            throw new RuntimeException("Error decrypting driver license", e);
+        }
+    }
+
+    public void setDriverLicense(String driverLicense) {
+        try {
+            this.driverLicense = EncryptionUtil.encrypt(driverLicense);
+        } catch (Exception e) {
+            throw new RuntimeException("Error encrypting driver license", e);
+        }
+    }
+
+    public BillingAddress getBillingAddress() {
+        return billingAddress;
+    }
+
+    public void setBillingAddress(BillingAddress billingAddress) {
+        this.billingAddress = billingAddress;
+    }
 }

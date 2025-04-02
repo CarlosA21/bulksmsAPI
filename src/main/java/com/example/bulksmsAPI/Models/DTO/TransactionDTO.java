@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public class TransactionDTO {
     private String type;
+    private String paymentMethod;
     private int credits;
     private LocalDateTime date;
 
@@ -35,5 +36,12 @@ public class TransactionDTO {
 
     public void setDate(LocalDateTime date) {
         this.date = date;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+    public void SetPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }

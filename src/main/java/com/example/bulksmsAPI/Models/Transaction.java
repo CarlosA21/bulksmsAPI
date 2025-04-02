@@ -20,6 +20,7 @@ public class Transaction {
     // Tipo de transacción: "PURCHASE" o "USAGE"
     private String type;
 
+    private String paymentMethod;
     // Cantidad de créditos involucrados.
     private int credits;
 
@@ -65,5 +66,13 @@ public class Transaction {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 }

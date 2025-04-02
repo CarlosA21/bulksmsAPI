@@ -1,6 +1,7 @@
 package com.example.bulksmsAPI.Models;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +19,7 @@ public class Contacts {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String phoneNumber;
 
     @Column(name = "`group`") // Usar comillas invertidas para evitar conflictos con palabras reservadas
@@ -60,6 +61,7 @@ public class Contacts {
         this.group = group;
     }
 
+    @JsonIgnore
     public User getUsuario() {
         return usuario;
     }
