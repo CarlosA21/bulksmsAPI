@@ -1,6 +1,5 @@
 package com.example.bulksmsAPI.Services;
 
-import com.example.bulksmsAPI.Models.DTO.GroupInfoDTO;
 import com.example.bulksmsAPI.Models.DTO.GroupsDTO;
 import com.example.bulksmsAPI.Models.Groups;
 import com.example.bulksmsAPI.Models.User;
@@ -41,21 +40,20 @@ public class GroupService {
         String email;
 
         if (principal instanceof UserDetails) {
-            email = ((UserDetails) principal).getUsername();  // Get email/username
+            email = ((UserDetails) principal).getUsername();
+        } else if (principal instanceof String) {
+            email = (String) principal;
         } else {
             throw new SecurityException("Invalid authentication principal");
         }
 
-        // Fetch the User entity from the database
-        User usuario = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-
         Groups group = new Groups();
-        group.setGroup_name(group.getGroup_name());
-        group.setPhoneNumbers(group.getPhoneNumbers());
-        group.setUser(usuario);
-        // Set other fields as necessary
+        group.setGroup_name(groupDTO.getGroup_name());
+        group.setUser(user);
+
         return groupRepository.save(group);
     }
 
@@ -71,11 +69,13 @@ public class GroupService {
         return groupRepository.save(group);
     }
 
-    public List<GroupInfoDTO> getGroupsByUserId(Long userId) {
-        List<Groups> groups = groupRepository.findByUserId(userId);
-        return groups.stream()
-                .map(group -> new GroupInfoDTO(group.getGroup_name(), group.getPhoneNumbers()))
-                .collect(Collectors.toList());
+   public List<Groups> getTagsByUserId (Long userId) {
+        return groupRepository.findByUserId(userId);
     }
+
+    public List<Groups> getAllGroups() {
+        return groupRepository.findAll();
+    }
+
 
 }

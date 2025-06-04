@@ -55,8 +55,8 @@ public class PayPalService {
             throw e; // Re-throw to rollback if necessary
         }
 
-        String successUrl = "http://localhost:8080/api/paypal/success?token=" + secureToken;
-        String cancelUrl = "http://localhost:8080/api/paypal/cancel";
+        String successUrl = "http://localhost:8080/api/payment/success?token=" + secureToken;
+        String cancelUrl = "http://localhost:8080/api/payment/cancel";
 
         APIContext apiContext = new APIContext(clientId, clientSecret, mode);
 

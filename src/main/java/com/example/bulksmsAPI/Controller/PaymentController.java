@@ -2,6 +2,7 @@ package com.example.bulksmsAPI.Controller;
 
 
 import com.example.bulksmsAPI.Models.CreditAccount;
+import com.example.bulksmsAPI.Models.DTO.PlanDTO;
 import com.example.bulksmsAPI.Models.DTO.PlanRequest;
 import com.example.bulksmsAPI.Models.DTO.StripeResponse;
 import com.example.bulksmsAPI.Models.DTO.TransactionDTO;
@@ -17,27 +18,21 @@ import com.example.bulksmsAPI.Services.StripeService;
 import com.example.bulksmsAPI.Services.UserService;
 import com.paypal.api.payments.Payment;
 import com.paypal.base.rest.PayPalRESTException;
-import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/paypal")
-public class PayPalController {
+@RequestMapping("/api/payment")
+public class PaymentController {
 
     @Autowired
     private UserService userService;
@@ -63,23 +58,19 @@ public class PayPalController {
      * Crea un pago y devuelve la URL de aprobación de PayPal.
      */
     @PostMapping("/pay")
-    public ResponseEntity<String> createPayment(@RequestParam int credits) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.User userDetails) {
-            String email = userDetails.getUsername();
-            User user = userService.getUserByEmail(email);
-            try {
-                String paymentUrl = payPalService.createPayment(credits, user.getId());  // Pass credits and user.getId()
-                return ResponseEntity.ok(paymentUrl);
-            } catch (PayPalRESTException e)
-            {
-                return ResponseEntity.badRequest().body("Error creating payment");
-            }
-        } else {
-            return ResponseEntity.status(401).body("Unauthorized"); // Or appropriate error response
+    public ResponseEntity<String> createPayment(@RequestParam int credits, @RequestParam Long userId) {
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            return ResponseEntity.badRequest().body("User not found");
         }
-
+        try {
+            String paymentUrl = payPalService.createPayment(credits, user.getId());
+            return ResponseEntity.ok(paymentUrl);
+        } catch (PayPalRESTException e) {
+            return ResponseEntity.badRequest().body("Error creating payment");
+        }
     }
+
     @GetMapping("/success")
     public RedirectView paymentSuccess(
             @RequestParam String token,
@@ -139,7 +130,7 @@ public class PayPalController {
 
                 // Redirect to Angular route with success message as query parameter
                 String successMessage = "Payment successful and " + transactionToken.getCredits() + " credits added to your account.";
-                String redirectUrl = "/api/paypal/payment-success-callback?paymentStatus=success&message=" + java.net.URLEncoder.encode(successMessage, "UTF-8"); // Encode message
+                String redirectUrl = "http://localhost:4200/checkout"; // Encode message
                 return new RedirectView(redirectUrl);
 
 
@@ -149,8 +140,6 @@ public class PayPalController {
 
         } catch (PayPalRESTException e) {
             return new RedirectView("/credits?paymentStatus=error&message=Error processing payment"); // Redirect with error
-        } catch (java.io.UnsupportedEncodingException e) { // Handle encoding exception
-            return new RedirectView("/credits?paymentStatus=error&message=Error encoding success message");
         }
     }
 
@@ -219,14 +208,14 @@ public class PayPalController {
         return ResponseEntity.ok("Payment canceled! No credits added.");
     }
 
-    @GetMapping("/cancel")
-    public ResponseEntity<String> paymentCancelled() {
-        return ResponseEntity.ok("Pago cancelado");
-    }
-
     @PostMapping("/deduct")
     public ResponseEntity deductCredits(@RequestParam Long userId, @RequestParam int credits) {
         creditService.deductCredits(userId, credits);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/transactions/all")
+    public ResponseEntity<List<Transaction>> getAllTransactions() {
+        return ResponseEntity.ok(creditService.getAllTransactions());
     }
 }

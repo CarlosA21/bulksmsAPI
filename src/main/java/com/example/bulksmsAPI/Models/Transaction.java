@@ -1,6 +1,7 @@
 package com.example.bulksmsAPI.Models;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,8 @@ public class Transaction {
     // Se relaciona con la cuenta de créditos del usuario.
     @ManyToOne
     @JoinColumn(name = "credit_account_id")
+    @JsonIgnore
+
     private CreditAccount creditAccount;
 
     // Tipo de transacción: "PURCHASE" o "USAGE"
@@ -22,6 +25,8 @@ public class Transaction {
 
     private String paymentMethod;
     // Cantidad de créditos involucrados.
+    @JsonIgnore
+
     private int credits;
 
     // Fecha y hora de la transacción.

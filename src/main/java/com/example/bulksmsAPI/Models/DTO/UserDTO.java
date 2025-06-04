@@ -17,7 +17,16 @@ public class UserDTO {
     private int Credits;
     private String roles;
     private BillingAddress billingAddress;
+    private Integer twoFactorCode; // Add this field
 
+
+    public Integer getTwoFactorCode() {
+        return twoFactorCode;
+    }
+
+    public void setTwoFactorCode(Integer twoFactorCode) {
+        this.twoFactorCode = twoFactorCode;
+    }
 
     public String getUsername() {
         return username;
@@ -83,3 +92,4 @@ public class UserDTO {
         this.billingAddress = billingAddress;
     }
 }
+

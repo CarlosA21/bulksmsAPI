@@ -1,5 +1,6 @@
 package com.example.bulksmsAPI.Models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,10 +21,10 @@ public class Groups {
 
     private String group_name;
 
-    private String phoneNumbers;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
 

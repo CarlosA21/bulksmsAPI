@@ -3,8 +3,11 @@ package com.example.bulksmsAPI.Controller;
 
 import com.example.bulksmsAPI.Models.Contacts;
 import com.example.bulksmsAPI.Models.DTO.ContactsDTO;
+import com.example.bulksmsAPI.Models.DTO.GroupsDTO;
+import com.example.bulksmsAPI.Models.Groups;
 import com.example.bulksmsAPI.Models.User;
 import com.example.bulksmsAPI.Services.ContactsService;
+import com.example.bulksmsAPI.Services.GroupService;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,10 +20,22 @@ import java.util.List;
 public class ContactsController {
     @Autowired
     private ContactsService contactsService;
+    @Autowired
+    private GroupService groupService;
 
     @PostMapping("/add")
     public Contacts addContacts(@RequestBody ContactsDTO contactsDTO) {
         return contactsService.addContacts(contactsDTO);
+    }
+    @PostMapping("/createGroup")
+    private ResponseEntity<?> createGroup( @RequestBody GroupsDTO groupsDTO) {
+        return ResponseEntity.ok(groupService.saveGroup(groupsDTO));
+    }
+
+    @GetMapping("/groupsById")
+    public ResponseEntity<?> getTagbyId(@RequestParam Long userId) {
+        List<Groups> groups = groupService.getTagsByUserId(userId);
+        return ResponseEntity.ok(groups);
     }
 
     @GetMapping("/user/{usuarioId}")

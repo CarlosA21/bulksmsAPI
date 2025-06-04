@@ -20,6 +20,9 @@ import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
+@Setter
+@Getter
+
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,11 +41,15 @@ public class User implements UserDetails {
     private List<Contacts> contacts;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private CreditAccount creditAccount;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private BillingAddress billingAddress;
+
+    private String secretKey; // Agregar este campo
+
 
 
     @Override
@@ -55,10 +62,6 @@ public class User implements UserDetails {
         // authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
         // if (isAdmin) { authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); }
         // return authorities;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     @Override
@@ -153,5 +156,13 @@ public class User implements UserDetails {
 
     public void setBillingAddress(BillingAddress billingAddress) {
         this.billingAddress = billingAddress;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
     }
 }

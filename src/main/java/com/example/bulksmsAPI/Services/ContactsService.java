@@ -39,7 +39,6 @@ public class ContactsService {
 
 
     public Contacts addContacts(ContactsDTO contactsDTO) {
-        // Get the authenticated user from Spring Security Context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -50,18 +49,19 @@ public class ContactsService {
         String email;
 
         if (principal instanceof UserDetails) {
-            email = ((UserDetails) principal).getUsername();  // Get email/username
+            email = ((UserDetails) principal).getUsername();
+        } else if (principal instanceof String) {
+            email = (String) principal;
         } else {
             throw new SecurityException("Invalid authentication principal");
         }
 
-        // Fetch the User entity from the database
-        User usuario = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // Create and save the contact
         Contacts contact = new Contacts();
-        contact.setUsuario(usuario);
+        contact.setUsuario(user);
         contact.setName(contactsDTO.getName());
         contact.setPhoneNumber(contactsDTO.getPhoneNumber());
         contact.setGroup(contactsDTO.getGroup());

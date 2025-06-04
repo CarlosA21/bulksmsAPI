@@ -19,11 +19,11 @@ public class JwtUtil {
     public String generateToken(User user) {  // Accepts the User object
         return JWT.create()
                 .withSubject(user.getEmail())  // Use user's email
+                .withClaim("role", user.getRoles()) // Include user's role as a claim
                 .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + 86400000))
+                .withExpiresAt(new Date(System.currentTimeMillis() + 86400000)) // Token valid for 1 day
                 .sign(Algorithm.HMAC256(SECRET_KEY));
     }
-
 
     public String getEmailFromToken(String token) {
         try {
@@ -32,7 +32,18 @@ public class JwtUtil {
                     .verify(token)
                     .getSubject();
         } catch (JWTVerificationException e) {
-            return null; // Or handle the exception as needed
+            return null; // Handle invalid tokens
+        }
+    }
+
+    public String getRoleFromToken(String token) {
+        try {
+            return JWT.require(Algorithm.HMAC256(SECRET_KEY))
+                    .build()
+                    .verify(token)
+                    .getClaim("role").asString(); // Extract role claim
+        } catch (JWTVerificationException e) {
+            return null; // Handle invalid tokens
         }
     }
 
@@ -51,5 +62,10 @@ public class JwtUtil {
         } catch (JWTVerificationException e) {
             return true; // Treat invalid tokens as expired
         }
+    }
+
+    public boolean hasAdminRole(String token) {
+        String role = getRoleFromToken(token);
+        return "ADMIN".equals(role); // Check if the token contains the ADMIN role
     }
 }

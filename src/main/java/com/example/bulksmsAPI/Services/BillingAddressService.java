@@ -3,7 +3,9 @@ package com.example.bulksmsAPI.Services;
 
 import com.example.bulksmsAPI.Models.BillingAddress;
 import com.example.bulksmsAPI.Models.DTO.BillingAddressDTO;
+import com.example.bulksmsAPI.Models.User;
 import com.example.bulksmsAPI.Repositories.BillingAddressRepository;
+import com.example.bulksmsAPI.Repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,27 @@ public class BillingAddressService {
     @Autowired
     private BillingAddressRepository billingAddressRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    public BillingAddress saveBillingAddress(BillingAddressDTO billingAddressDTO, Long userId) {
+        // Fetch the User entity by userId
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for ID: " + userId));
+
+        // Create a new BillingAddress entity from the DTO
+        BillingAddress billingAddress = new BillingAddress();
+
+        billingAddress.setAddressLine1(billingAddressDTO.getAddressLine1());
+        billingAddress.setCity(billingAddressDTO.getCity());
+        billingAddress.setState(billingAddressDTO.getState());
+        billingAddress.setZipCode(billingAddressDTO.getZipCode());
+        billingAddress.setCountry(billingAddressDTO.getCountry());
+        billingAddress.setUser(user); // Pass User object instead of userId
+
+        // Save the entity to the repository
+        return billingAddressRepository.save(billingAddress);
+    }
     public Optional<BillingAddressDTO> listBillingAddress(Long userId) {
         return billingAddressRepository.findByUserId(userId)
                 .map(billingAddress -> new BillingAddressDTO(
@@ -50,4 +73,14 @@ public class BillingAddressService {
         );
     }
 
+    public Optional<BillingAddressDTO> findBillingAddressByUser(Long userId) {
+        return billingAddressRepository.findByUserId(userId)
+                .map(billingAddress -> new BillingAddressDTO(
+                        billingAddress.getAddressLine1(),
+                        billingAddress.getCity(),
+                        billingAddress.getState(),
+                        billingAddress.getZipCode(),
+                        billingAddress.getCountry()
+                ));
+    }
 }

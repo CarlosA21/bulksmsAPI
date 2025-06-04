@@ -16,7 +16,7 @@ public class ContactsDTO {
 
     private String group;
 
-    private UserDTO usuario;
+    private Long userId; // Replace UserDTO with Long
 
 
     public String getName() {

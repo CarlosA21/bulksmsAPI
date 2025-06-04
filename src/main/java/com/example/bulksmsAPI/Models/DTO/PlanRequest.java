@@ -15,5 +15,9 @@ public class PlanRequest {
 
     private String planName;
 
+    private int credits;
+
     private String Currency;
+
+
 }

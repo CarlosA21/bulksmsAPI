@@ -4,6 +4,7 @@ import com.example.bulksmsAPI.Security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -33,28 +34,41 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Add CORS configuration
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuración CORS
+                .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Sin estado
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/register").permitAll()
-                        .requestMatchers("/api/auth/google").permitAll()
-                        .requestMatchers("/api/auth/find-user/**").authenticated()
-                        .requestMatchers("/api/paypal/success").permitAll()
-                        .requestMatchers("/api/paypal/payment-success-callback/**").authenticated() // Permit this path
-                        .requestMatchers("/api/paypal/transactions/**").authenticated() // Permit this path
-                        .requestMatchers("/api/paypal/stripe-success").permitAll()
-                        .requestMatchers("/api/paypal/cancel").permitAll()
-                        .requestMatchers("/api/paypal/**").authenticated()
-                        .requestMatchers("/api/contacts").authenticated()
-                        .requestMatchers("/api/contacts/edit/**").authenticated()
-                        .requestMatchers("/api/message/user/**").authenticated()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permitir solicitudes preflight
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/enable-2fa",
+                                "/api/auth/verify-2fa",
+                                "/api/auth/google",
+                                "/api/auth/request-password-reset",
+                                "/api/auth/reset-password",
+                                "/api/plans"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/payment/**",
+                                "/api/contacts/**",
+                                "/api/messages/**",
+                                "/api/scheduled/**",
+                                "/api/billing/**",
+                                "/api/scheduledmessages/**"
 
-                        .requestMatchers("/api/message/**").authenticated()
-                        .anyRequest().authenticated()
+                        ).authenticated()
+                        .requestMatchers(
+                                "/api/auth/createadmin",
+                                "/api/auth/edit/**",
+                                "/api/auth/list",
+                                "/api/auth/delete/**",
+                                "/api/plans/**"
+
+                                ).hasAuthority("ROLE_ADMIN")
+                        .anyRequest().authenticated()// Restringir acceso a admin
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Filtro JWT
 
         return http.build();
     }

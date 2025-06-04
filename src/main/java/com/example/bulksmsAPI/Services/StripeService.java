@@ -34,17 +34,17 @@ public class StripeService {
     @Transactional
     public StripeResponse checkoutProducts(PlanRequest planRequest, Long userId) {
         try {
-            // Define product data
+            // Define product data with credits amount included
             SessionCreateParams.LineItem.PriceData.ProductData productData =
                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                            .setName(planRequest.getPlanName())
+                            .setName(planRequest.getPlanName() + " - " + planRequest.getCredits() + " Credits")
                             .build();
 
             // Define price data
             SessionCreateParams.LineItem.PriceData priceData =
                     SessionCreateParams.LineItem.PriceData.builder()
                             .setCurrency(planRequest.getCurrency() != null ? planRequest.getCurrency() : "USD")
-                            .setUnitAmount(planRequest.getAmount()) // Stripe usa centavos, verifica si necesitas multiplicar por 100
+                            .setUnitAmount(planRequest.getAmount()) // Stripe uses cents, ensure amount is multiplied by 100 if needed
                             .setProductData(productData)
                             .build();
 
@@ -59,12 +59,13 @@ public class StripeService {
             SessionCreateParams params =
                     SessionCreateParams.builder()
                             .setMode(SessionCreateParams.Mode.PAYMENT)
-                            .setSuccessUrl("http://localhost:8080/api/paypal/stripe-success?userId=" + userId + "&amount=" + planRequest.getAmount())
-                            .setCancelUrl("http://localhost:8080/api/paypal/stripe-cancel")
+                            .setSuccessUrl("http://localhost:4200/checkout")
+                            .setCancelUrl("http://localhost:8080/api/payment/stripe-cancel")
                             .addLineItem(lineItem)
                             .build();
 
             Session session = Session.create(params);
+            handleSuccessfulPayment(userId, planRequest.getCredits());
 
             return StripeResponse.builder()
                     .status("SUCCESS")

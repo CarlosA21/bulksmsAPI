@@ -3,6 +3,7 @@ package com.example.bulksmsAPI.Models.DTO;
 import java.time.LocalDateTime;
 
 public class TransactionDTO {
+    private String creditAccountId;
     private String type;
     private String paymentMethod;
     private int credits;
@@ -43,5 +44,12 @@ public class TransactionDTO {
     }
     public void SetPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public String getCreditAccountId() {
+        return creditAccountId;
+    }
+    public void setCreditAccountId(String creditAccountId) {
+        this.creditAccountId = creditAccountId;
     }
 }

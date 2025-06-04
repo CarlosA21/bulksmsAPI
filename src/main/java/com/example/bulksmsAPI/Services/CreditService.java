@@ -28,33 +28,6 @@ public class CreditService {
     private TransactionRepository transactionRepository;
 
     /**
-     * Procesa un pago exitoso, aumentando el saldo y registrando la transacción.
-     */
-    @Transactional
-    public void processPayment(Long userId, int credits) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        CreditAccount account = user.getCreditAccount();
-        if (account == null) {
-            // Si el usuario no tiene cuenta de créditos, la creamos.
-            account = new CreditAccount();
-            account.setUser(user);
-            user.setCreditAccount(account);
-        }
-        account.addCredits(credits);
-        creditAccountRepository.save(account);
-
-        // Registrar la transacción de compra
-        Transaction transaction = new Transaction();
-        transaction.setCreditAccount(account);
-        transaction.setType("PURCHASE");
-        transaction.setCredits(credits);
-        transaction.setDate(LocalDateTime.now());
-        transactionRepository.save(transaction);
-    }
-
-    /**
      * Registra el uso de créditos, disminuyendo el saldo y registrando la transacción.
      */
     @Transactional
@@ -103,4 +76,9 @@ public class CreditService {
                 .map(t -> new TransactionDTO(t.getType(), t.getCredits(), t.getDate()))
                 .collect(Collectors.toList());
     }
+    public List<Transaction> getAllTransactions() {
+        return transactionRepository.findAll();
+    }
+
+
 }
