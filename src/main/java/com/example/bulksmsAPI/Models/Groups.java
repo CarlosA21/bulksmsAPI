@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "groups")
+@Table(name = "usergroups") // Cambiar el nombre de la tabla
 
 @Getter
 @Setter
@@ -21,11 +21,9 @@ public class Groups {
 
     private String group_name;
 
-
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
     private User user;
-
 
 }
