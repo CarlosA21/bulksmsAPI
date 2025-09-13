@@ -4,6 +4,7 @@ package com.example.bulksmsAPI.Models.DTO;
 import com.example.bulksmsAPI.Models.BillingAddress;
 import com.example.bulksmsAPI.Models.Contacts;
 
+import java.util.Date;
 import java.util.List;
 
 public class UserDTO {
@@ -18,6 +19,9 @@ public class UserDTO {
     private String roles;
     private BillingAddress billingAddress;
     private Integer twoFactorCode; // Add this field
+    private Date dob;
+
+
 
 
     public Integer getTwoFactorCode() {

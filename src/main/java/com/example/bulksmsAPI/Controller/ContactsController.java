@@ -27,6 +27,15 @@ public class ContactsController {
     public Contacts addContacts(@RequestBody ContactsDTO contactsDTO) {
         return contactsService.addContacts(contactsDTO);
     }
+    @PostMapping("/add-batch")
+    public ResponseEntity<List<Contacts>> addContactsBatch(@RequestBody List<ContactsDTO> contactsDTOList) {
+        try {
+            List<Contacts> savedContacts = contactsService.addContactsBatch(contactsDTOList);
+            return ResponseEntity.ok(savedContacts);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
     @PostMapping("/createGroup")
     private ResponseEntity<?> createGroup( @RequestBody GroupsDTO groupsDTO) {
         return ResponseEntity.ok(groupService.saveGroup(groupsDTO));

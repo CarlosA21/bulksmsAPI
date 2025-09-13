@@ -165,4 +165,12 @@ public class User implements UserDetails {
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
     }
+
+    public Date getDob() {
+        return dob;
+    }
+    public void setDob(Date dob) {
+        this.dob = dob;
+    }
+
 }

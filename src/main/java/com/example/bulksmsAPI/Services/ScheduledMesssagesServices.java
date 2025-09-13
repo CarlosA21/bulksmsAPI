@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -24,11 +25,17 @@ public class ScheduledMesssagesServices {
     @Autowired
     private CreditAccountRepository creditAccountRepository;
 
-    // Create a new scheduled message
+    // Crear un nuevo mensaje agendado
     public ScheduledMessages createScheduledMessage(ScheduledMessages scheduledMessage) {
+        // Redondea la fecha para poner segundos y milisegundos en cero
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(scheduledMessage.getScheduledDate());
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        scheduledMessage.setScheduledDate(cal.getTime());
+
         return scheduledMessagesRepository.save(scheduledMessage);
     }
-
     public List<ScheduledMessages> getScheduledMessagesByUserId(Long userId) {
         return scheduledMessagesRepository.findByUserId(userId);
     }
@@ -52,7 +59,6 @@ public class ScheduledMesssagesServices {
             ScheduledMessages message = existingMessage.get();
             message.setMessage(updatedMessage.getMessage());
             message.setPhoneNumbers(updatedMessage.getPhoneNumbers());
-            message.setScheduledTime(updatedMessage.getScheduledTime());
             message.setScheduledDate(updatedMessage.getScheduledDate());
             message.setSent(updatedMessage.isSent());
             message.setStatus(updatedMessage.getStatus());
@@ -70,27 +76,43 @@ public class ScheduledMesssagesServices {
         }
         return false;
     }
-    private final String horisenApiUrl = "https://api.horisen.com/sendSms";
-    private final String username = "yourUsername";
-    private final String password = "yourPassword";
+    private final String horisenApiUrl = "http://194.0.137.123:32112/bulk/sendsms";
+    private final String username = "15525_BRMRetail";
+    private final String password = "HNvdMRqZ";
 
-    @Scheduled(fixedRate = 60000) // Runs every minute
+
+    @Scheduled(fixedRate = 60000) // Ejecutar cada minuto
     public void sendScheduledMessages() {
-        // Get the current date and time
-        Date currentDate = new Date();
-        String currentTime = new java.text.SimpleDateFormat("HH:mm").format(currentDate);
+        System.out.println("Ejecutando tarea programada para enviar mensajes...");
 
-        // Fetch messages matching the current date and time
-        List<ScheduledMessages> messagesToSend = scheduledMessagesRepository.findByScheduledDateAndScheduledTime(currentDate, currentTime);
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        Date startTime = cal.getTime();
+
+        cal.add(Calendar.MINUTE, 1);
+        Date endTime = cal.getTime();
+
+        Date now = new Date();
+        System.out.println("Hora actual: " + now);
+
+
+        List<ScheduledMessages> messagesToSend = scheduledMessagesRepository
+                .findByScheduledDateBeforeAndIsSentFalse(now);
+
         RestTemplate restTemplate = new RestTemplate();
 
         for (ScheduledMessages message : messagesToSend) {
+            System.out.println("Procesando mensaje ID: " + message.getId());
+
             if (!message.isSent()) {
                 try {
                     String receiver = message.getPhoneNumbers();
                     String text = message.getMessage();
                     Long userId = message.getUserId();
                     Long creditValue = message.getCreditValue();
+
+                    System.out.println("Intentando enviar a: " + receiver);
 
                     ResponseEntity<String> response = restTemplate.getForEntity(
                             horisenApiUrl + "?type=text&username=" + username + "&password=" + password +
@@ -103,7 +125,7 @@ public class ScheduledMesssagesServices {
                         message.setSent(true);
                         message.setStatus("successful");
 
-                        // Deduct the credit value from the user's CreditAccount
+                        // Descontar créditos
                         Optional<CreditAccount> optionalCreditAccount = creditAccountRepository.findByUserId(userId);
                         if (optionalCreditAccount.isPresent()) {
                             CreditAccount creditAccount = optionalCreditAccount.get();
@@ -111,14 +133,17 @@ public class ScheduledMesssagesServices {
                             creditAccount.setBalance(Math.toIntExact(updatedCredits));
                             creditAccountRepository.save(creditAccount);
                         } else {
-                            message.setStatus("failed");
+                            message.setStatus("credit_not_found");
                         }
                     } else {
-                        message.setStatus("failed");
+                        message.setStatus("api_failed");
                     }
                 } catch (Exception e) {
-                    message.setStatus("failed");
+                    message.setStatus("exception_failed");
+                    System.out.println("Error: " + e.getMessage());
+                    e.printStackTrace();
                 }
+
                 scheduledMessagesRepository.save(message);
             }
         }

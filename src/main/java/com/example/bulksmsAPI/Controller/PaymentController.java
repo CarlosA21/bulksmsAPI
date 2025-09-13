@@ -18,6 +18,7 @@ import com.example.bulksmsAPI.Services.StripeService;
 import com.example.bulksmsAPI.Services.UserService;
 import com.paypal.api.payments.Payment;
 import com.paypal.base.rest.PayPalRESTException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,6 +26,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.io.IOException;
+import java.net.URLEncoder;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -58,13 +61,23 @@ public class PaymentController {
      * Crea un pago y devuelve la URL de aprobación de PayPal.
      */
     @PostMapping("/pay")
-    public ResponseEntity<String> createPayment(@RequestParam int credits, @RequestParam Long userId) {
+    public ResponseEntity<String> createPayment(
+            @RequestParam int credits,
+            @RequestParam Long userId,
+            @RequestParam double amount) {
+
         User user = userService.getUserById(userId);
         if (user == null) {
             return ResponseEntity.badRequest().body("User not found");
         }
+
+        // Validación del monto
+        if (amount <= 0) {
+            return ResponseEntity.badRequest().body("Invalid amount");
+        }
+
         try {
-            String paymentUrl = payPalService.createPayment(credits, user.getId());
+            String paymentUrl = payPalService.createPayment(credits, user.getId(), amount);
             return ResponseEntity.ok(paymentUrl);
         } catch (PayPalRESTException e) {
             return ResponseEntity.badRequest().body("Error creating payment");
@@ -72,51 +85,59 @@ public class PaymentController {
     }
 
     @GetMapping("/success")
-    public RedirectView paymentSuccess(
+    public void paymentSuccess(
             @RequestParam String token,
             @RequestParam String paymentId,
-            @RequestParam String PayerID) {
+            @RequestParam String PayerID,
+            HttpServletResponse response) throws IOException {
 
-        // Extract the token (before the comma if present).
+        // Extract the token (before the comma if present)
         String cleanToken = token;
         if (token.contains(",")) {
             cleanToken = token.substring(0, token.indexOf(","));
         }
 
-        System.out.println("Cleaned Token: " + cleanToken); // Log the cleaned token
-
         Optional<TransactionToken> optionalToken = tokenRepository.findByTokenAndUsedFalse(cleanToken);
         if (optionalToken.isEmpty()) {
-            return new RedirectView("/credits?paymentStatus=error&message=Invalid or expired token"); // Redirect with error
+            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                    "?status=error&message=" + URLEncoder.encode("Invalid or expired token", "UTF-8");
+            response.sendRedirect(redirectUrl);
+            return;
         }
 
         TransactionToken transactionToken = optionalToken.get();
         if (transactionToken.getExpiry().isBefore(Instant.now())) {
-            return new RedirectView("/credits?paymentStatus=error&message=Token expired"); // Redirect with error
+            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                    "?status=error&message=" + URLEncoder.encode("Token expired", "UTF-8");
+            response.sendRedirect(redirectUrl);
+            return;
         }
 
         User user = userService.getUserById(transactionToken.getUserId());
         if (user == null) {
-            return new RedirectView("/credits?paymentStatus=error&message=User not found"); // Redirect with error
+            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                    "?status=error&message=" + URLEncoder.encode("User not found", "UTF-8");
+            response.sendRedirect(redirectUrl);
+            return;
         }
 
         try {
             Payment payment = payPalService.executePayment(paymentId, PayerID);
 
             if (payment.getState().equals("approved")) {
-                // ... credit account update and transaction saving (same as before) ...
-
+                // Update credit account
                 CreditAccount creditAccount = creditAccountRepository.findByUserId(user.getId())
                         .orElseGet(() -> {
                             CreditAccount newAccount = new CreditAccount();
                             newAccount.setUser(user);
                             newAccount.setBalance(0);
-                            return creditAccountRepository.save(newAccount); // <-- RETURN statement is here now
+                            return creditAccountRepository.save(newAccount);
                         });
 
                 creditAccount.setBalance(creditAccount.getBalance() + transactionToken.getCredits());
                 creditAccountRepository.save(creditAccount);
 
+                // Save transaction
                 Transaction transaction = new Transaction();
                 transaction.setCreditAccount(creditAccount);
                 transaction.setType("PURCHASE");
@@ -125,21 +146,30 @@ public class PaymentController {
                 transaction.setPaymentMethod("PAYPAL");
                 transactionRepository.save(transaction);
 
+                // Mark token as used
                 transactionToken.setUsed(true);
                 tokenRepository.save(transactionToken);
 
-                // Redirect to Angular route with success message as query parameter
-                String successMessage = "Payment successful and " + transactionToken.getCredits() + " credits added to your account.";
-                String redirectUrl = "http://localhost:4200/checkout"; // Encode message
-                return new RedirectView(redirectUrl);
+                // Redirect to success callback
+                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                        "?token=" + cleanToken +
+                        "&paymentId=" + paymentId +
+                        "&PayerID=" + PayerID +
+                        "&status=success" +
+                        "&credits=" + transactionToken.getCredits();
 
+                response.sendRedirect(redirectUrl);
 
             } else {
-                return new RedirectView("/credits?paymentStatus=error&message=Payment not approved"); // Redirect with error
+                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                        "?status=error&message=" + URLEncoder.encode("Payment not approved", "UTF-8");
+                response.sendRedirect(redirectUrl);
             }
 
         } catch (PayPalRESTException e) {
-            return new RedirectView("/credits?paymentStatus=error&message=Error processing payment"); // Redirect with error
+            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                    "?status=error&message=" + URLEncoder.encode("Error processing payment: " + e.getMessage(), "UTF-8");
+            response.sendRedirect(redirectUrl);
         }
     }
 
@@ -193,14 +223,59 @@ public class PaymentController {
     @PostMapping("/checkout-session")
     public ResponseEntity<StripeResponse> createCheckoutSession(@RequestBody PlanRequest planRequest,
                                                                 @RequestParam Long userId) {
-        StripeResponse response = stripeService.checkoutProducts(planRequest, userId);
-        return ResponseEntity.ok(response);
+
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            return ResponseEntity.badRequest().body(
+                    StripeResponse.builder()
+                            .status("FAILED")
+                            .message("User not found")
+                            .build()
+            );
+        }
+
+        // Validación del monto
+        if (planRequest.getAmount() <= 0) {
+            return ResponseEntity.badRequest().body(
+                    StripeResponse.builder()
+                            .status("FAILED")
+                            .message("Invalid amount")
+                            .build()
+            );
+        }
+
+        // Validación de créditos
+        if (planRequest.getCredits() <= 0) {
+            return ResponseEntity.badRequest().body(
+                    StripeResponse.builder()
+                            .status("FAILED")
+                            .message("Invalid credits amount")
+                            .build()
+            );
+        }
+
+        try {
+            StripeResponse response = stripeService.checkoutProducts(planRequest, userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    StripeResponse.builder()
+                            .status("FAILED")
+                            .message("Error creating payment session: " + e.getMessage())
+                            .build()
+            );
+        }
     }
 
     @GetMapping("/stripe-success")
-    public ResponseEntity<String> paymentSuccess(@RequestParam Long userId, @RequestParam int amount) {
-        stripeService.handleSuccessfulPayment(userId, amount);
-        return ResponseEntity.ok("Payment successful! Credits added.");
+    public void stripeSuccess(
+            @RequestParam String token,
+            @RequestParam String session_id,
+            @RequestParam Long userId,
+            @RequestParam int credits,
+            HttpServletResponse response) throws IOException {
+
+        stripeService.handleStripeSuccess(token, session_id, userId, credits, response);
     }
     @PostMapping("/stripe-cancel")
     public ResponseEntity<String> paymentFailed(@RequestParam Long userId, @RequestParam int amount) {

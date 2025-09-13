@@ -1,0 +1,117 @@
+services:
+  bulksms-mysql:
+    image: mysql:8.0
+    container_name: bulksms-mysql-prod
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-bulksmsdb}
+      MYSQL_USER: ${DB_USER:-bulksmsuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./mysql-config:/etc/mysql/conf.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --max_connections=200
+      --innodb_buffer_pool_size=256M
+
+  bulksms-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bulksms-api-prod
+    environment:
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://bulksms-mysql:3306/${DB_NAME:-bulksmsdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-bulksmsuser}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+
+      # JPA/Hibernate Configuration
+      DDL_AUTO: ${DDL_AUTO:-update}
+
+      # Application Configuration
+      PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      SHOW_SQL: ${SHOW_SQL:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_LOG_LEVEL: ${CORS_LOG_LEVEL:-WARN}
+
+      # PayPal Configuration
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_MODE: ${PAYPAL_MODE:-live}
+
+      # Stripe Configuration
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+
+      # Google OAuth Configuration
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+
+      # Email Configuration
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_DEBUG: ${MAIL_DEBUG:-false}
+
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-production}
+
+      # JVM Options for production
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      bulksms-mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Optional: Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: bulksms-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - bulksms-api
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+
+volumes:
+  db_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  bulksms-network:
+    driver: bridge

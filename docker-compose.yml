@@ -1,36 +1,88 @@
-version: '3.8'
-
 services:
   bulksms-mysql:
     image: mysql:8.0
     container_name: bulksms-mysql
     environment:
-      MYSQL_DATABASE: bulksmsdb
-      MYSQL_USER: bulksmsuser
-      MYSQL_PASSWORD: bulksmspass
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ${DB_NAME:-bulksmsdb}
+      MYSQL_USER: ${DB_USER:-bulksmsuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-bulksmspass}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - bulksms-network
 
   bulksms-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: bulksms-api
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://bulksms-mysql:3306/bulksmsdb
-      SPRING_DATASOURCE_USERNAME: bulksmsuser
-      SPRING_DATASOURCE_PASSWORD: bulksmspass
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://bulksms-mysql:3306/${DB_NAME:-bulksmsdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-bulksmsuser}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-bulksmspass}
+
+      # JPA/Hibernate Configuration
+      DDL_AUTO: ${DDL_AUTO:-update}
+
+      # Application Configuration
+      PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-bulksmsapi}
+      SHOW_SQL: ${SHOW_SQL:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_LOG_LEVEL: ${CORS_LOG_LEVEL:-INFO}
+
+      # PayPal Configuration
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
+      PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+
+      # Stripe Configuration
+      STRIPE_API_KEY: ${STRIPE_API_KEY:-}
+
+      # Google OAuth Configuration
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:4200/maindash}
+
+      # Email Configuration
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_DEBUG: ${MAIL_DEBUG:-false}
+
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:8080"
     depends_on:
       bulksms-mysql:
         condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+    volumes:
+      - app_logs:/app/logs
 
 volumes:
   db_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  bulksms-network:
+    driver: bridge

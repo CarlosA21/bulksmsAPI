@@ -7,11 +7,14 @@ import com.example.bulksmsAPI.Models.DTO.AuthResponse;
 import com.example.bulksmsAPI.Models.DTO.BillingAddressDTO;
 import com.example.bulksmsAPI.Models.DTO.UserDTO;
 import com.example.bulksmsAPI.Models.User;
+import com.example.bulksmsAPI.Models.UserResponse;
 import com.example.bulksmsAPI.Security.JwtUtil;
 import com.example.bulksmsAPI.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -52,7 +55,7 @@ public class AuthController {
         String username = user.getUsername();
         String userID = String.valueOf(user.getId());
         String Role = String.valueOf(user.getRoles());
-        return ResponseEntity.ok(new AuthResponse(token, username, userID, Role, user.getSecretKey()));
+        return ResponseEntity.ok(new AuthResponse(token, username, userID,  Role, user.getSecretKey()));
     }
 
     @PostMapping("/login")
@@ -135,7 +138,7 @@ public class AuthController {
     public ResponseEntity<?> requestPasswordReset(@RequestParam String email) {
         try {
             String resetToken = userService.createResetToken(email);
-            String resetLink = "https://your-frontend-url.com/reset-password?token=" + resetToken;
+            String resetLink = "http://localhost:4200/reset-password?token=" + resetToken;
 
             // Usa el servicio para enviar el correo
             emailService.sendPasswordResetEmail(email, resetLink);
@@ -151,25 +154,56 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         try {
-            // Llama a validateResetToken para verificar el token
-            userService.validateResetToken(token);
+            String token = request.get("token");
+            String newPassword = request.get("newPassword");
 
-            // Llama a resetPassword para cambiar la contraseña
+            // Validaciones básicas
+            if (token == null || token.trim().isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Token is required");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            }
+
+            if (newPassword == null || newPassword.length() < 8) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Password must be at least 8 characters long");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            }
+
+            // Validar y usar el token
+            userService.validateResetToken(token);
             userService.resetPassword(token, newPassword);
 
-            // Responde con un mensaje de éxito
             Map<String, String> response = new HashMap<>();
             response.put("message", "Password reset successfully");
             return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
-            // Maneja errores como tokens inválidos o expirados
             Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
+            error.put("error", "Invalid or expired reset token");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
+    @GetMapping(value = "/getuserinfo/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UserResponse> getUserInfo(@PathVariable Long userId) {
+        User user = userService.getUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        UserResponse dto = new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getDriverLicense()
+        );
+
+        return ResponseEntity.ok(dto);
+    }
+
 
 
 

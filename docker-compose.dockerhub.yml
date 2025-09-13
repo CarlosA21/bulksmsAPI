@@ -1,0 +1,98 @@
+services:
+  bulksms-mysql:
+    image: mysql:8.0
+    container_name: bulksms-mysql-prod
+    environment:
+      MYSQL_DATABASE: bulksmsdb
+      MYSQL_USER: bulksmsuser
+      MYSQL_PASSWORD: bulksmspass
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --max_connections=200
+      --innodb_buffer_pool_size=256M
+
+  bulksms-api:
+    # Usar imagen de Docker Hub en lugar de build local
+    image: carlosa21/bulksms-api:latest
+    container_name: bulksms-api-prod
+    environment:
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://bulksms-mysql:3306/bulksmsdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: bulksmsuser
+      SPRING_DATASOURCE_PASSWORD: bulksmspass
+
+      # JPA/Hibernate Configuration
+      DDL_AUTO: update
+
+      # Application Configuration
+      PORT: 8080
+      JWT_SECRET: BulkSMSAPISecretKey2025Ca3242019732001SuperSecure
+      SHOW_SQL: false
+      LOG_LEVEL: INFO
+      CORS_LOG_LEVEL: WARN
+
+      # PayPal Configuration
+      PAYPAL_CLIENT_ID: AQjGxw-GNiZRbKIVd6J_t6p5U2d8-9K8Q_ZZ7Jh9w8vGxNkYbHp3q5t2F_
+      PAYPAL_CLIENT_SECRET: ELInTrRPBYSNjzp8dY8Dsdw7Mx8w7x5zr_Q79TOxNDUCZE2rrNRC0zRkXnWGk1xWXaBqVntQdFaNi5Ox
+      PAYPAL_MODE: sandbox
+
+      # Stripe Configuration
+      STRIPE_API_KEY: sk_test_your_stripe_secret_key_here
+
+      # Google OAuth Configuration
+      GOOGLE_CLIENT_ID: 790410421867-v8dtetqbt6tfk4eoip774ciojbmfoo5r.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_REDIRECT_URI: http://theglobalmessaging.com/maindash
+
+      # Email Configuration
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: 587
+      MAIL_USERNAME: theglobalmessaging@gmail.com
+      MAIL_PASSWORD: "vwfv qkls xkwj djhf"
+      MAIL_DEBUG: false
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: production
+
+      # JVM Options for production
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      bulksms-mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bulksms-network
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  db_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  bulksms-network:
+    driver: bridge

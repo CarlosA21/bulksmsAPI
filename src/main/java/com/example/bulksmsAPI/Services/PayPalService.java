@@ -26,24 +26,22 @@ public class PayPalService {
     @Autowired
     private TransactionTokenRepository tokenRepository;
 
-    @Value("${paypal.clientId}")
+    @Value("${PAYPAL_CLIENT_ID:${paypal.clientId:}}")
     private String clientId;
 
-    @Value("${paypal.clientSecret}")
+    @Value("${PAYPAL_CLIENT_SECRET:${paypal.clientSecret:}}")
     private String clientSecret;
 
-    @Value("${paypal.mode}")
+    @Value("${PAYPAL_MODE:${paypal.mode:sandbox}}")
     private String mode;
 
-
-
     @Transactional
-    public String createPayment(int credits, Long userId) throws PayPalRESTException {
+    public String createPayment(int credits, Long userId, double amount) throws PayPalRESTException {
         String secureToken = UUID.randomUUID().toString();
         TransactionToken token = new TransactionToken();
         token.setToken(secureToken);
         token.setUserId(userId);
-        token.setCredits(credits); // Set credits in the token
+        token.setCredits(credits);
         token.setUsed(false);
         token.setExpiry(Instant.now().plus(Duration.ofMinutes(30)));
 
@@ -52,25 +50,26 @@ public class PayPalService {
             log.info("Token saved: {}", secureToken);
         } catch (Exception e) {
             log.error("Error saving token: {}", e.getMessage(), e);
-            throw e; // Re-throw to rollback if necessary
+            throw e;
         }
 
+        // URLs actualizadas según la conversación anterior
         String successUrl = "http://localhost:8080/api/payment/success?token=" + secureToken;
-        String cancelUrl = "http://localhost:8080/api/payment/cancel";
+        String cancelUrl = "http://localhost:4200/credits"; // Redirección directa a credits
 
         APIContext apiContext = new APIContext(clientId, clientSecret, mode);
 
-        Amount amount = new Amount();
-        amount.setCurrency("USD");
-        amount.setTotal(String.format("%.2f", credits * 0.10));
+        Amount paypalAmount = new Amount();
+        paypalAmount.setCurrency("USD");
+        // Usar el amount que viene del frontend en lugar del cálculo fijo
+        paypalAmount.setTotal(String.format("%.2f", amount));
 
         Transaction transaction = new Transaction();
-        transaction.setDescription("Compra de Créditos");
-        transaction.setAmount(amount);
+        transaction.setDescription("Compra de Créditos - " + credits + " credits");
+        transaction.setAmount(paypalAmount);
 
         List<Transaction> transactions = new ArrayList<>();
         transactions.add(transaction);
-
 
         Payer payer = new Payer();
         payer.setPaymentMethod("paypal");
@@ -98,9 +97,8 @@ public class PayPalService {
             throw e;
         }
 
-        return null; // Handle the case where no approval URL is found
+        return null;
     }
-
 
     public Payment executePayment(String paymentId, String payerId) throws PayPalRESTException {
         APIContext apiContext = new APIContext(clientId, clientSecret, mode);
@@ -110,10 +108,4 @@ public class PayPalService {
         paymentExecution.setPayerId(payerId);
         return payment.execute(apiContext, paymentExecution);
     }
-
-
 }
-
-
-
-

@@ -11,4 +11,5 @@ public class StripeResponse {
     private String message;
     private String sessionId;
     private String sessionUrl;
+    private String token;
 }

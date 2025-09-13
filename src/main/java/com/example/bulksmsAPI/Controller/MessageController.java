@@ -19,16 +19,14 @@ import java.util.List;
 @RequestMapping("/api/message")
 public class MessageController {
 
-   @Autowired
-   private MessageService messageService;
+    @Autowired
+    private MessageService messageService;
 
-   @Autowired
-   private UserRepository userRepository;
-
-    @PostMapping("/save")
-    public ResponseEntity<String> saveMessage(@RequestBody MessageDTO messageDTO) {
-        messageService.saveMessage(messageDTO);
-        return ResponseEntity.ok("Message saved successfully");
+    // 🔹 Este endpoint envía el SMS a Horisen y lo guarda en la BD
+    @PostMapping("/send")
+    public ResponseEntity<Messages> sendMessage(@RequestBody MessageDTO messageDTO) {
+        Messages savedMessage = messageService.sendAndSaveMessage(messageDTO);
+        return ResponseEntity.ok(savedMessage);
     }
 
     @GetMapping("/{id}")
@@ -56,11 +54,7 @@ public class MessageController {
 
     @GetMapping("/user")
     public ResponseEntity<List<Messages>> getMessagesByUserId(@RequestParam Long userId) {
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(404).build();
-        }
-
-        return ResponseEntity.ok(messageService.getMessagesByUser(user.getId()));
+        return ResponseEntity.ok(messageService.getMessagesByUser(userId));
     }
+
 }

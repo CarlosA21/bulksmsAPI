@@ -1,0 +1,41 @@
+# Ignore files and directories that shouldn't be included in Docker build context
+target/
+.git/
+.gitignore
+.env
+.env.local
+.env.example
+*.md
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Maven wrapper (we use the one in the container)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Application logs
+logs/
+*.log
+
+# Testing
+coverage/
+test-results/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Docker files (we don't need these in the container)
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -45,14 +45,16 @@ public class SecurityConfig {
                                 "/api/auth/enable-2fa",
                                 "/api/auth/verify-2fa",
                                 "/api/auth/google",
-                                "/api/auth/request-password-reset",
+                                "/api/auth/request-password-reset/**",
                                 "/api/auth/reset-password",
-                                "/api/plans"
+                                "/api/auth/getuserinfo/**",
+                                "/api/plans",
+                                "/api/payment/**"
+
                         ).permitAll()
                         .requestMatchers(
-                                "/api/payment/**",
-                                "/api/contacts/**",
-                                "/api/messages/**",
+                            "/api/contacts/**",
+                                "/api/message/**",
                                 "/api/scheduled/**",
                                 "/api/billing/**",
                                 "/api/scheduledmessages/**"

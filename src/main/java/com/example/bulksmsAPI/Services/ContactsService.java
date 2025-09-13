@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -37,8 +38,22 @@ public class ContactsService {
     private UserRepository userRepository; // Corrected variable name for consistency
 
 
-
+    @Transactional
     public Contacts addContacts(ContactsDTO contactsDTO) {
+        User user = getCurrentAuthenticatedUser();
+
+        // Create and save the contact
+        Contacts contact = new Contacts();
+        contact.setUsuario(user);
+        contact.setName(contactsDTO.getName());
+        contact.setPhoneNumber(contactsDTO.getPhoneNumber());
+        contact.setGroup(contactsDTO.getGroup());
+
+        return contactsRepository.save(contact);
+    }
+
+    // Método auxiliar para optimizar la obtención del usuario autenticado
+    private User getCurrentAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -56,20 +71,34 @@ public class ContactsService {
             throw new SecurityException("Invalid authentication principal");
         }
 
-        User user = userRepository.findByEmail(email)
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+    }
 
-        // Create and save the contact
-        Contacts contact = new Contacts();
-        contact.setUsuario(user);
-        contact.setName(contactsDTO.getName());
-        contact.setPhoneNumber(contactsDTO.getPhoneNumber());
-        contact.setGroup(contactsDTO.getGroup());
+    // Método adicional para procesar múltiples contactos (opcional)
+    @Transactional
+    public List<Contacts> addContactsBatch(List<ContactsDTO> contactsDTOList) {
+        if (contactsDTOList == null || contactsDTOList.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-        return contactsRepository.save(contact);
+        User user = getCurrentAuthenticatedUser();
+
+        List<Contacts> contactsToSave = new ArrayList<>();
+        for (ContactsDTO contactsDTO : contactsDTOList) {
+            Contacts contact = new Contacts();
+            contact.setUsuario(user);
+            contact.setName(contactsDTO.getName());
+            contact.setPhoneNumber(contactsDTO.getPhoneNumber());
+            contact.setGroup(contactsDTO.getGroup());
+            contactsToSave.add(contact);
+        }
+
+        return contactsRepository.saveAll(contactsToSave);
     }
 
     public List<Contacts> listContacts(Long usuarioId) {
+
         return contactsRepository.findByUsuarioId(usuarioId);
     }
 

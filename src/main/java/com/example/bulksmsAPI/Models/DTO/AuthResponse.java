@@ -17,6 +17,7 @@ public class AuthResponse {
         this.token = token;
         this.username = username;
         this.userId = userId;
+
         this.Role = Role;
         this.secretKey = secretKey; // Initialize the secret key
 
