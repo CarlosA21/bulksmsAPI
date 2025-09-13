@@ -1,8 +1,9 @@
+# Crear el script corregido directamente en tu EC2
+cat > instalacion-completa-fixed.sh << 'EOF'
 #!/bin/bash
 
 # ====================================================================
-# INSTALACIÓN COMPLETA BULKSMS API EN EC2
-# Este script instala Docker, descarga las imágenes y ejecuta la aplicación
+# INSTALACIÓN COMPLETA BULKSMS API EN EC2 - VERSIÓN CORREGIDA
 # ====================================================================
 
 set -e  # Detener el script si hay errores
@@ -10,127 +11,90 @@ set -e  # Detener el script si hay errores
 echo "=========================================="
 echo "  INSTALACIÓN COMPLETA BULKSMS API"
 echo "=========================================="
-echo ""
 
-# Función para mostrar mensajes con formato
+# Función para mostrar mensajes
 log_info() {
-    echo "🔵 [INFO] $1"
+    echo "[INFO] $1"
 }
 
 log_success() {
-    echo "✅ [SUCCESS] $1"
+    echo "[SUCCESS] $1"
 }
 
 log_warning() {
-    echo "⚠️  [WARNING] $1"
-}
-
-log_error() {
-    echo "❌ [ERROR] $1"
+    echo "[WARNING] $1"
 }
 
 # ====================================================================
-# PASO 1: ACTUALIZAR EL SISTEMA
+# PASO 1: ACTUALIZAR SISTEMA E INSTALAR HERRAMIENTAS
 # ====================================================================
-log_info "Actualizando paquetes del sistema..."
+log_info "Actualizando sistema e instalando herramientas básicas..."
 sudo yum update -y
+sudo yum install -y curl wget
 log_success "Sistema actualizado"
 
 # ====================================================================
 # PASO 2: INSTALAR DOCKER
 # ====================================================================
-log_info "Verificando si Docker está instalado..."
+log_info "Verificando Docker..."
 
 if ! command -v docker &> /dev/null; then
-    log_info "Docker no encontrado. Instalando Docker..."
-
-    # Instalar Docker
+    log_info "Instalando Docker..."
     sudo yum install -y docker
-
-    # Iniciar y habilitar Docker
     sudo systemctl start docker
     sudo systemctl enable docker
-
-    # Agregar usuario ec2-user al grupo docker
     sudo usermod -a -G docker ec2-user
+    log_success "Docker instalado"
 
-    log_success "Docker instalado correctamente"
-    log_warning "IMPORTANTE: Cierra sesión y vuelve a conectarte para aplicar los permisos de Docker"
-    log_warning "Después de reconectarte, vuelve a ejecutar este script"
-
-    # Verificar si el usuario ya está en el grupo docker
+    # Verificar permisos
     if ! groups $USER | grep -q docker; then
-        log_warning "Necesitas cerrar sesión y volver a conectarte. Luego ejecuta:"
-        echo "wget https://raw.githubusercontent.com/CarlosA21/bulksmsAPI/main/instalacion-completa.sh"
-        echo "chmod +x instalacion-completa.sh"
-        echo "./instalacion-completa.sh"
-        exit 1
+        log_warning "Aplicando permisos de Docker..."
+        sudo systemctl restart docker
+        # Usar sudo para el resto del script si es necesario
+        DOCKER_CMD="sudo docker"
+    else
+        DOCKER_CMD="docker"
     fi
 else
-    log_success "Docker ya está instalado"
+    log_success "Docker ya instalado"
+    DOCKER_CMD="docker"
 fi
 
-# Verificar que Docker esté ejecutándose
-log_info "Verificando que Docker esté ejecutándose..."
+# Asegurar que Docker esté ejecutándose
 sudo systemctl start docker
-log_success "Docker está ejecutándose"
 
 # ====================================================================
-# PASO 3: LIMPIAR INSTALACIÓN ANTERIOR (SI EXISTE)
+# PASO 3: LIMPIAR INSTALACIÓN ANTERIOR
 # ====================================================================
-log_info "Limpiando instalación anterior si existe..."
-
-# Detener contenedores existentes
-docker stop bulksms-api bulksms-mysql 2>/dev/null || true
-log_info "Contenedores detenidos"
-
-# Eliminar contenedores existentes
-docker rm bulksms-api bulksms-mysql 2>/dev/null || true
-log_info "Contenedores eliminados"
-
-# Eliminar red existente
-docker network rm bulksms-network 2>/dev/null || true
-log_info "Red Docker eliminada"
-
-# Eliminar volúmenes (opcional - descomenta si quieres limpiar datos)
-# docker volume rm mysql_data 2>/dev/null || true
-# log_info "Volúmenes eliminados"
-
+log_info "Limpiando instalación anterior..."
+$DOCKER_CMD stop bulksms-api bulksms-mysql 2>/dev/null || true
+$DOCKER_CMD rm bulksms-api bulksms-mysql 2>/dev/null || true
+$DOCKER_CMD network rm bulksms-network 2>/dev/null || true
 log_success "Limpieza completada"
 
 # ====================================================================
-# PASO 4: DESCARGAR IMÁGENES DOCKER
+# PASO 4: DESCARGAR IMÁGENES
 # ====================================================================
-log_info "Descargando imagen MySQL:8.0..."
-docker pull mysql:8.0
-log_success "Imagen MySQL descargada"
+log_info "Descargando imagen MySQL..."
+$DOCKER_CMD pull mysql:8.0
+log_success "MySQL descargado"
 
-log_info "Descargando imagen BulkSMS API..."
-docker pull carlosa21/bulksms-api:latest
-log_success "Imagen BulkSMS API descargada"
+log_info "Descargando BulkSMS API..."
+$DOCKER_CMD pull carlosa21/bulksms-api:latest
+log_success "BulkSMS API descargado"
 
 # ====================================================================
-# PASO 5: CREAR RED DOCKER
+# PASO 5: CREAR RED
 # ====================================================================
 log_info "Creando red Docker..."
-docker network create bulksms-network
-log_success "Red Docker creada: bulksms-network"
+$DOCKER_CMD network create bulksms-network
+log_success "Red creada"
 
 # ====================================================================
-# PASO 6: CREAR DIRECTORIO DE TRABAJO
+# PASO 6: INICIAR MYSQL
 # ====================================================================
-APP_DIR="/home/ec2-user/bulksms-api"
-log_info "Creando directorio de trabajo: $APP_DIR"
-mkdir -p $APP_DIR
-cd $APP_DIR
-log_success "Directorio creado y configurado"
-
-# ====================================================================
-# PASO 7: INICIAR CONTENEDOR MYSQL
-# ====================================================================
-log_info "Iniciando contenedor MySQL..."
-
-docker run -d \
+log_info "Iniciando MySQL..."
+$DOCKER_CMD run -d \
   --name bulksms-mysql \
   --network bulksms-network \
   -p 3306:3306 \
@@ -143,164 +107,101 @@ docker run -d \
   mysql:8.0 \
   --default-authentication-plugin=mysql_native_password
 
-log_success "Contenedor MySQL iniciado"
+log_success "MySQL iniciado"
 
 # ====================================================================
-# PASO 8: ESPERAR INICIALIZACIÓN DE MYSQL
+# PASO 7: ESPERAR MYSQL
 # ====================================================================
-log_info "Esperando que MySQL se inicialice completamente..."
-log_info "Esto puede tomar entre 60-120 segundos..."
-
-# Esperar 2 minutos para que MySQL esté completamente listo
-for i in {1..120}; do
-    if docker logs bulksms-mysql 2>&1 | grep -q "ready for connections"; then
-        log_success "MySQL está listo para conexiones"
-        break
-    fi
-    echo -n "."
-    sleep 1
-    if [ $i -eq 120 ]; then
-        log_warning "MySQL está tardando más de lo esperado, pero continuaremos..."
-    fi
-done
-
-# Esperar un poco más para estar seguros
-sleep 30
+log_info "Esperando MySQL (90 segundos)..."
+sleep 90
 
 # ====================================================================
-# PASO 9: INICIAR APLICACIÓN BULKSMS API
+# PASO 8: INICIAR APLICACIÓN
 # ====================================================================
-log_info "Iniciando aplicación BulkSMS API..."
-
-docker run -d \
+log_info "Iniciando BulkSMS API..."
+$DOCKER_CMD run -d \
   --name bulksms-api \
   --network bulksms-network \
   -p 8080:8080 \
   --restart unless-stopped \
   carlosa21/bulksms-api:latest
 
-log_success "Aplicación BulkSMS API iniciada"
+log_success "Aplicación iniciada"
 
 # ====================================================================
-# PASO 10: VERIFICAR INSTALACIÓN
+# PASO 9: VERIFICAR ESTADO
 # ====================================================================
-log_info "Esperando que la aplicación se inicie (30 segundos)..."
+log_info "Esperando aplicación (30 segundos)..."
 sleep 30
 
-log_info "Verificando estado de los contenedores..."
 echo ""
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-echo ""
-
-# Verificar logs de MySQL
-log_info "Últimas líneas del log de MySQL:"
-docker logs --tail=5 bulksms-mysql
+echo "=== ESTADO DE CONTENEDORES ==="
+$DOCKER_CMD ps
 
 echo ""
-
-# Verificar logs de la aplicación
-log_info "Últimas líneas del log de la aplicación:"
-docker logs --tail=10 bulksms-api
+echo "=== LOGS DE MYSQL ==="
+$DOCKER_CMD logs --tail=5 bulksms-mysql
 
 echo ""
+echo "=== LOGS DE APLICACIÓN ==="
+$DOCKER_CMD logs --tail=10 bulksms-api
 
 # ====================================================================
-# PASO 11: OBTENER IP PÚBLICA Y MOSTRAR INFORMACIÓN FINAL
+# PASO 10: INFORMACIÓN FINAL
 # ====================================================================
-log_info "Obteniendo IP pública de EC2..."
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "NO_DISPONIBLE")
+# Obtener IP pública de forma más robusta
+PUBLIC_IP=""
+if command -v curl &> /dev/null; then
+    PUBLIC_IP=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+fi
+
+if [ -z "$PUBLIC_IP" ]; then
+    if command -v wget &> /dev/null; then
+        PUBLIC_IP=$(wget -qO- --timeout=5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+    fi
+fi
+
+if [ -z "$PUBLIC_IP" ]; then
+    PUBLIC_IP="TU_IP_PUBLICA_EC2"
+fi
 
 echo ""
 echo "=========================================="
-echo "✅ INSTALACIÓN COMPLETADA EXITOSAMENTE"
+echo "INSTALACIÓN COMPLETADA"
 echo "=========================================="
 echo ""
-echo "🌐 Tu aplicación está disponible en:"
-if [ "$PUBLIC_IP" != "NO_DISPONIBLE" ]; then
-    echo "   http://$PUBLIC_IP:8080"
-else
-    echo "   http://TU_IP_PUBLICA_EC2:8080"
-fi
+echo "Aplicación disponible en:"
+echo "  http://$PUBLIC_IP:8080"
 echo ""
-echo "🗄️  Base de datos MySQL disponible en:"
-if [ "$PUBLIC_IP" != "NO_DISPONIBLE" ]; then
-    echo "   Host: $PUBLIC_IP:3306"
-else
-    echo "   Host: TU_IP_PUBLICA_EC2:3306"
-fi
-echo "   Database: bulksmsdb"
-echo "   User: bulksmsuser"
-echo "   Password: bulksmspass"
+echo "Base de datos MySQL:"
+echo "  Host: $PUBLIC_IP:3306"
+echo "  Database: bulksmsdb"
+echo "  User: bulksmsuser"
+echo "  Password: bulksmspass"
 echo ""
-echo "📋 COMANDOS ÚTILES:"
-echo "   Ver logs de la app:    docker logs -f bulksms-api"
-echo "   Ver logs de MySQL:     docker logs -f bulksms-mysql"
-echo "   Ver estado:            docker ps"
-echo "   Reiniciar app:         docker restart bulksms-api"
-echo "   Reiniciar MySQL:       docker restart bulksms-mysql"
-echo "   Detener todo:          docker stop bulksms-api bulksms-mysql"
-echo "   Ver esta info:         cat $APP_DIR/info.txt"
+echo "Comandos útiles:"
+echo "  Ver logs: $DOCKER_CMD logs -f bulksms-api"
+echo "  Ver estado: $DOCKER_CMD ps"
+echo "  Reiniciar: $DOCKER_CMD restart bulksms-api"
 echo ""
 
-# Guardar información en archivo
-cat > $APP_DIR/info.txt << EOF
-=== INFORMACIÓN DE LA INSTALACIÓN ===
-Fecha de instalación: $(date)
-IP Pública: $PUBLIC_IP
+# Crear archivo de información
+mkdir -p /home/ec2-user/bulksms-info
+cat > /home/ec2-user/bulksms-info/info.txt << EOFINFO
+Instalación completada: $(date)
+IP: $PUBLIC_IP
+App: http://$PUBLIC_IP:8080
+DB: $PUBLIC_IP:3306
+User: bulksmsuser / Pass: bulksmspass
 
-URLs:
-- Aplicación: http://$PUBLIC_IP:8080
-- Base de datos: $PUBLIC_IP:3306
+Comandos:
+- Ver logs: $DOCKER_CMD logs -f bulksms-api
+- Estado: $DOCKER_CMD ps
+- Reiniciar: $DOCKER_CMD restart bulksms-api
+EOFINFO
 
-Credenciales MySQL:
-- Database: bulksmsdb
-- User: bulksmsuser
-- Password: bulksmspass
-- Root Password: rootpass
+log_success "Información guardada en /home/ec2-user/bulksms-info/info.txt"
+echo ""
+echo "INSTALACIÓN FINALIZADA EXITOSAMENTE!"
 
-Comandos útiles:
-- Ver logs de la app: docker logs -f bulksms-api
-- Ver logs de MySQL: docker logs -f bulksms-mysql
-- Ver estado: docker ps
-- Reiniciar app: docker restart bulksms-api
-- Detener todo: docker stop bulksms-api bulksms-mysql
 EOF
-
-log_success "Información guardada en: $APP_DIR/info.txt"
-
-# ====================================================================
-# PASO 12: VERIFICACIÓN FINAL DE SALUD
-# ====================================================================
-log_info "Realizando verificación final..."
-
-# Verificar que los contenedores estén ejecutándose
-if docker ps | grep -q "bulksms-mysql"; then
-    log_success "✅ MySQL está ejecutándose"
-else
-    log_error "❌ MySQL no está ejecutándose"
-fi
-
-if docker ps | grep -q "bulksms-api"; then
-    log_success "✅ BulkSMS API está ejecutándose"
-else
-    log_error "❌ BulkSMS API no está ejecutándose"
-fi
-
-# Verificar conectividad
-log_info "Verificando conectividad..."
-sleep 10
-
-if curl -s http://localhost:8080 > /dev/null 2>&1; then
-    log_success "✅ La aplicación responde correctamente"
-else
-    log_warning "⚠️  La aplicación aún se está iniciando o hay un problema"
-    log_info "Espera unos minutos más y verifica con: docker logs -f bulksms-api"
-fi
-
-echo ""
-echo "🎉 ¡INSTALACIÓN FINALIZADA!"
-echo "🔗 Accede a tu aplicación en el navegador usando la URL mostrada arriba"
-echo ""
-
-# Script finalizado exitosamente
-exit 0
