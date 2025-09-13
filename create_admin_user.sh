@@ -25,7 +25,7 @@ cat > /tmp/create_admin.sql << 'EOF'
 USE bulksmsdb;
 
 -- Insertar usuario administrador
-INSERT INTO User (
+INSERT INTO user (
     username,
     email,
     password,
