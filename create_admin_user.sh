@@ -46,7 +46,7 @@ VALUES (
 -- Crear cuenta de crédito para el usuario admin
 INSERT INTO credit_account (user_id, balance, currency)
 VALUES (
-    (SELECT user_id FROM User WHERE username = 'admin'),
+    (SELECT user_id FROM user WHERE username = 'admin'),
     1000.00,
     'USD'
 );
@@ -61,7 +61,7 @@ INSERT INTO billing_address (
     country
 )
 VALUES (
-    (SELECT user_id FROM User WHERE username = 'admin'),
+    (SELECT user_id FROM user WHERE username = 'admin'),
     'Admin Street 123',
     'Admin City',
     'Admin State',
@@ -71,20 +71,20 @@ VALUES (
 
 -- Verificar que se creó el usuario correctamente
 SELECT 'Usuario creado:' as info;
-SELECT user_id, username, email, roles, dob FROM User WHERE username = 'admin';
+SELECT user_id, username, email, roles, dob FROM user WHERE username = 'admin';
 
 -- Verificar la cuenta de crédito
 SELECT 'Cuenta de crédito:' as info;
 SELECT ca.*, u.username
 FROM credit_account ca
-JOIN User u ON ca.user_id = u.user_id
+JOIN user u ON ca.user_id = u.user_id
 WHERE u.username = 'admin';
 
 -- Verificar la dirección de facturación
 SELECT 'Dirección de facturación:' as info;
 SELECT ba.*, u.username
 FROM billing_address ba
-JOIN User u ON ba.user_id = u.user_id
+JOIN user u ON ba.user_id = u.user_id
 WHERE u.username = 'admin';
 EOF
 
@@ -98,7 +98,7 @@ if [ $? -eq 0 ]; then
     echo "✅ USUARIO ADMINISTRADOR CREADO EXITOSAMENTE"
     echo ""
     echo "=== CREDENCIALES DEL ADMIN ==="
-    echo "Username: admin"
+    echo "username: admin"
     echo "Email: admin@bulksms.com"
     echo "Password: password"
     echo "Role: ROLE_ADMIN"
