@@ -32,7 +32,7 @@ INSERT INTO user (
     roles,
     driver_license,
     dob,
-    secretKey
+
 )
 VALUES (
     'admin',
@@ -41,7 +41,6 @@ VALUES (
     'ROLE_ADMIN',
     'ENCRYPTED_DL_123456789',
     '1990-01-01',
-    'admin-secret-key-2024'
 );
 
 -- Crear cuenta de crédito para el usuario admin
