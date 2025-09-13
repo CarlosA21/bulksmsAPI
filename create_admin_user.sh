@@ -31,7 +31,7 @@ INSERT INTO user (
     password,
     roles,
     driver_license,
-    dob,
+    dob
 
 )
 VALUES (
@@ -40,7 +40,7 @@ VALUES (
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
     'ROLE_ADMIN',
     'ENCRYPTED_DL_123456789',
-    '1990-01-01',
+    '1990-01-01'
 );
 
 -- Crear cuenta de crédito para el usuario admin
