@@ -52,6 +52,10 @@ sudo docker run -d \
   --name bulksms-api \
   --network bulksms-network \
   -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:mysql://bulksms-mysql:3306/bulksmsdb \
+  -e SPRING_DATASOURCE_USERNAME=bulksmsuser \
+  -e SPRING_DATASOURCE_PASSWORD=bulksmspass \
+  -e SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver \
   --restart unless-stopped \
   carlosa21/bulksms-api:latest
 
