@@ -19,6 +19,9 @@ RUN mvn clean package -DskipTests
 # Runtime stage - using eclipse-temurin instead of openjdk
 FROM eclipse-temurin:17-jre-jammy
 
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user for security
 RUN addgroup --system spring && adduser --system --group spring
 
@@ -28,8 +31,11 @@ WORKDIR /app
 # Copy the JAR file from build stage
 COPY --from=build /app/target/bulksmsAPI-*.jar app.jar
 
+# Copy the production environment file
+COPY .env.production .env.production
+
 # Change ownership to the spring user
-RUN chown spring:spring app.jar
+RUN chown spring:spring app.jar .env.production
 
 # Switch to the non-root user
 USER spring
@@ -40,6 +46,11 @@ EXPOSE 8080
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Set default environment variables from .env.production
+ENV SPRING_PROFILES_ACTIVE=production
+ENV PORT=8080
+ENV DDL_AUTO=update
 
 # Run the JAR file with optimized JVM settings
 ENTRYPOINT ["java", \
