@@ -44,11 +44,10 @@ VALUES (
 );
 
 -- Crear cuenta de crédito para el usuario admin
-INSERT INTO credit_account (user_id, balance, currency)
+INSERT INTO credit_account (user_id, balance)
 VALUES (
     (SELECT user_id FROM user WHERE username = 'admin'),
-    1000.00,
-    'USD'
+    1000
 );
 
 -- Crear dirección de facturación para el usuario admin
