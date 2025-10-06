@@ -59,7 +59,7 @@ public class AuthController {
             ValidationStatus accountValidated = ValidationStatus.PENDING;
 
             String Role = String.valueOf(user.getRoles());
-            return ResponseEntity.ok(new AuthResponse(token, username, userID, Role, accountValidated,  user.getSecretKey()));
+            return ResponseEntity.ok(new AuthResponse(token, userID, Role, accountValidated,  user.getSecretKey()));
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
@@ -85,7 +85,6 @@ public class AuthController {
             // Crear la respuesta
             AuthResponse authResponse = new AuthResponse(
                     token,
-                    user.getUsername(),
                     String.valueOf(user.getId()),
                     user.getRoles(),
                     user.getAccountValidated(),
@@ -341,13 +340,13 @@ public class AuthController {
     @PostMapping("/validate-account/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> validateUserAccount(
-            @PathVariable Long userId,
-            @RequestParam boolean validated) {
+            @PathVariable Long userId) {
         try {
             if (!isAdmin()) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied: Admin role required.");
             }
             User updatedUser = userService.validateUserAccount(userId);
+            updatedUser.setAccountValidated(ValidationStatus.APPROVED);
             Map<String, Object> response = new HashMap<>();
             response.put("message", "User account validation status updated");
             response.put("userId", updatedUser.getId());
@@ -359,7 +358,29 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
+    // deny user account (admin only)
+    @PostMapping("/deny-account/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> denyUserAccount(
+            @PathVariable Long userId
+            ) {
+        try {
+            if (!isAdmin()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied: Admin role required.");
+            }
+            User updatedUser = userService.denyUserAccount(userId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User account has been denied");
+            response.put("userId", updatedUser.getId());
+            response.put("accountValidated", updatedUser.getAccountValidated());
 
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
 
 
     // Get all pending validation users (admin only)

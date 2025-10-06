@@ -4,7 +4,6 @@ import com.example.bulksmsAPI.Models.ValidationStatus;
 
 public class AuthResponse {
     private String token;
-    private String username;
     private String userId;
     private String Role;
     private ValidationStatus accountValidated;
@@ -16,9 +15,8 @@ public class AuthResponse {
     // Default constructor (needed by Jackson for deserialization)
     public AuthResponse() {}
 
-    public AuthResponse(String token, String username, String userId, String Role,  ValidationStatus validationStatus, String secretKey) {
+    public AuthResponse(String token, String userId, String Role, ValidationStatus validationStatus, String secretKey) {
         this.token = token;
-        this.username = username;
         this.userId = userId;
         this.accountValidated = validationStatus;
         this.Role = Role;
@@ -50,13 +48,7 @@ public class AuthResponse {
         this.userId = userId;
     }
 
-    public String getUsername() {
-        return username;
-    }
-    public String setUsername(String username) {
-        this.username = username;
-        return username;
-    }
+
     public String getRole() {
         return Role;
     }

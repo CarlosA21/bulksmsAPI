@@ -70,6 +70,8 @@ public class SecurityConfig {
                                 "/api/auth/delete/**",
                                 "api/auth/createuser",
                                 "/api/auth/pending-validations",
+                                "/validation-image/**",
+                                "/deny-account/**",
                                 "/api/auth/validate-account/**",
                                 "/api/plans/**",
                                 "/api/payment/transactions/all",

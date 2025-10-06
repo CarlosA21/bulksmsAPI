@@ -167,7 +167,7 @@ public class UserService implements UserDetailsService {
                     user = savedUser;
                 }
                 String token = jwtUtil.generateToken(user);
-                return new AuthResponse(token, user.getEmail(), String.valueOf(user.getId()), user.getRoles(), user.getAccountValidated(), user.getSecretKey());
+                return new AuthResponse(token, String.valueOf(user.getId()), user.getRoles(), user.getAccountValidated(), user.getSecretKey());
             } else {
                 throw new RuntimeException("Invalid Google ID Token");
             }
@@ -385,9 +385,24 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
+        String email = user.getEmail(); // Get email from user
+
+        emailService.sendAccountApprovedEmail(email);
         user.setAccountValidated(ValidationStatus.APPROVED);
 
         return userRepository.save(user);
     }
 
+    //deny user account (admin function)
+    public User denyUserAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        String email = user.getEmail(); // Get email from user
+
+        emailService.sendAccountRejectedEmail(email);
+
+        user.setAccountValidated(ValidationStatus.REJECTED);
+        return userRepository.save(user);
+    }
 }

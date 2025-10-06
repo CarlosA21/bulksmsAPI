@@ -38,11 +38,11 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    public void sendAccountApprovedEmail(String to, String userName) {
+    public void sendAccountApprovedEmail( String email) {
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
+        message.setTo(email);
         message.setSubject("Account Verification Approved - Global Messaging");
-        message.setText("Dear " + (userName != null ? userName : "User") + ",\n\n" +
+        message.setText("Dear " + (email != null ? email : "User") + ",\n\n" +
             "Great news! Your account verification has been approved.\n\n" +
             "You now have full access to all features of Global Messaging services.\n\n" +
             "You can now:\n" +
@@ -60,13 +60,12 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    public void sendAccountRejectedEmail(String to, String userName, String reason) {
+    public void sendAccountRejectedEmail(String email) {
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
+        message.setTo(email);
         message.setSubject("Account Verification Update - Global Messaging");
-        message.setText("Dear " + (userName != null ? userName : "User") + ",\n\n" +
+        message.setText("Dear " + (email != null ? email : "User") + ",\n\n" +
             "We regret to inform you that your account verification could not be approved at this time.\n\n" +
-            (reason != null && !reason.isEmpty() ? "Reason: " + reason + "\n\n" : "") +
             "Please ensure that:\n" +
             "- Your identification document is clear and readable\n" +
             "- All information matches your registration details\n" +
