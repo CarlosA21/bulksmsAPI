@@ -54,7 +54,7 @@ services:
       # Google OAuth Configuration
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:4200/maindash}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://theglobalmessaging.com/dashboard/maindash}
 
       # Email Configuration
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}

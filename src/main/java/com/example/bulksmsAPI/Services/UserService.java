@@ -1,10 +1,10 @@
 package com.example.bulksmsAPI.Services;
 
-import com.example.bulksmsAPI.Models.CreditAccount;
+import com.example.bulksmsAPI.Models.*;
 import com.example.bulksmsAPI.Models.DTO.AuthResponse;
-import com.example.bulksmsAPI.Models.ResetToken;
-import com.example.bulksmsAPI.Models.User;
-import com.example.bulksmsAPI.Models.BillingAddress;
+import com.example.bulksmsAPI.Models.DTO.BillingAddressDTO;
+import com.example.bulksmsAPI.Models.DTO.PendingUserValidationDTO;
+import com.example.bulksmsAPI.Models.DTO.profileDTO;
 import com.example.bulksmsAPI.Repositories.CreditAccountRepository;
 import com.example.bulksmsAPI.Repositories.ResetTokenRepository;
 import com.example.bulksmsAPI.Repositories.UserRepository;
@@ -54,17 +54,23 @@ public class UserService implements UserDetailsService {
     private JwtUtil jwtUtil;
 
     @Autowired
+    private FileStorageService fileStorageService;
+
+    @Autowired
     private JavaMailSender mailSender;
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     private ResetTokenRepository resetTokenRepository;
-    private final String FRONTEND_URL = "https://your-frontend-url.com/reset-password";
+    private final String FRONTEND_URL = "http://localhost:4200/reset-password";
 
 
 
-    private static final String CLIENT_ID = "344365743547-965vrlju1l75ot5agnbv6g22l3c71isa.apps.googleusercontent.com";
+    private static final String CLIENT_ID = "790410421867-v8dtetqbt6tfk4eoip774ciojbmfoo5r.apps.googleusercontent.com";
 
-    public User registerUser(String email, String password, String driverLicense, BillingAddress billingAddress) {
+    public User registerUser(String email, String password, String driverLicense, BillingAddress billingAddress, LegalIdType legalIdType, String legalIdNumber) throws IOException {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already in use");
         }
@@ -72,9 +78,36 @@ public class UserService implements UserDetailsService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRoles("USER");
-        user.setDriverLicense(driverLicense);
+
+        // Si se proporciona legalIdType y legalIdNumber, usarlos
+        if (legalIdType != null && legalIdNumber != null && !legalIdNumber.isEmpty()) {
+            user.setLegalIdType(legalIdType);
+            user.setLegalIdNumber(legalIdNumber);
+        }
+
+
         user.setBillingAddress(billingAddress);
-        billingAddress.setUser(user); // Pass User object instead of userId
+        billingAddress.setUser(user);
+
+        User savedUser = userRepository.save(user);
+
+        CreditAccount creditAccount = new CreditAccount();
+        creditAccount.setUser(savedUser);
+        creditAccount.setBalance(0);
+        creditAccountRepository.save(creditAccount);
+
+        return savedUser;
+    }
+
+    public User createProfile(profileDTO profileDTO) {
+        if (userRepository.findByEmail(profileDTO.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already in use");
+        }
+        User user = new User();
+        user.setUsername(profileDTO.getUsername());
+        user.setEmail(profileDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(profileDTO.getPassword()));
+        user.setRoles(profileDTO.getRoles());
 
         User savedUser = userRepository.save(user);
 
@@ -123,7 +156,7 @@ public class UserService implements UserDetailsService {
                     user.setEmail(email);
                     user.setPassword(passwordEncoder.encode("google-auth"));
                     user.setRoles("USER");
-                    user.setDriverLicense("");
+                    user.setAccountValidated(ValidationStatus.PENDING);
                     User savedUser = userRepository.save(user);
 
                     CreditAccount creditAccount = new CreditAccount();
@@ -134,7 +167,7 @@ public class UserService implements UserDetailsService {
                     user = savedUser;
                 }
                 String token = jwtUtil.generateToken(user);
-                return new AuthResponse(token, user.getEmail(), String.valueOf(user.getId()), user.getRoles(), user.getSecretKey());
+                return new AuthResponse(token, user.getEmail(), String.valueOf(user.getId()), user.getRoles(), user.getAccountValidated(), user.getSecretKey());
             } else {
                 throw new RuntimeException("Invalid Google ID Token");
             }
@@ -142,7 +175,6 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("Google Authentication failed", e);
         }
     }
-
 
     public byte[] enable2FA(String email, String appName) {
         User user = userRepository.findByEmail(email)
@@ -250,9 +282,7 @@ public class UserService implements UserDetailsService {
         if (password != null && !password.isEmpty()) {
             user.setPassword(passwordEncoder.encode(password));
         }
-        if (driverLicense != null && !driverLicense.isEmpty()) {
-            user.setDriverLicense(driverLicense);
-        }
+
         if (roles != null && !roles.isEmpty()) {
             user.setRoles(roles);
         }
@@ -265,6 +295,52 @@ public class UserService implements UserDetailsService {
         return userRepository.findAll();
     }
 
+    // Get all pending validation users with images
+    public List<PendingUserValidationDTO> getPendingValidationUsers() throws IOException {
+        List<User> pendingUsers = userRepository.findByAccountValidated(ValidationStatus.PENDING);
+        List<PendingUserValidationDTO> result = new ArrayList<>();
+
+        for (User user : pendingUsers) {
+            PendingUserValidationDTO dto = new PendingUserValidationDTO();
+            dto.setUserId(user.getId());
+            dto.setEmail(user.getEmail());
+            dto.setLegalIdType(user.getLegalIdType());
+            dto.setLegalIdNumber(user.getLegalIdNumber());
+            dto.setDriverLicense(user.getLegalIdNumber()); // Deprecated - para compatibilidad
+            dto.setValidationImageName(user.getValidationImageName());
+
+            // Convertir imagen a Base64 si existe
+            if (user.getValidationImageName() != null) {
+                try {
+                    byte[] imageBytes = fileStorageService.loadFileAsBytes(user.getValidationImageName());
+                    String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+                    dto.setValidationImageBase64(base64Image);
+                } catch (Exception e) {
+                    dto.setValidationImageBase64(null);
+                }
+            }
+
+            // Agregar billing address si existe
+            if (user.getBillingAddress() != null) {
+                BillingAddressDTO addressDTO = new BillingAddressDTO(
+                        user.getBillingAddress().getId(),
+                        user.getBillingAddress().getAddressLine1(),
+                        user.getBillingAddress().getAddressLine2(),
+                        user.getBillingAddress().getCity(),
+                        user.getBillingAddress().getState(),
+                        user.getBillingAddress().getZipCode(),
+                        user.getBillingAddress().getCountry(),
+                        user.getId()
+                );
+                dto.setBillingAddress(addressDTO);
+            }
+
+            result.add(dto);
+        }
+
+        return result;
+    }
+
     // Delete user by ID
     public void deleteUser(Long userId) {
         if (!userRepository.existsById(userId)) {
@@ -273,6 +349,45 @@ public class UserService implements UserDetailsService {
         userRepository.deleteById(userId);
     }
 
+    // Upload validation image
+    public User uploadValidationImage(Long userId, org.springframework.web.multipart.MultipartFile file) throws IOException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
 
+        // Delete old image if exists
+        if (user.getValidationImageName() != null) {
+            fileStorageService.deleteFile(user.getValidationImageName());
+        }
+
+        // Store new image
+        String filename = fileStorageService.storeFile(file, userId);
+        user.setAccountValidated(ValidationStatus.PENDING);
+        user.setValidationImageName(filename);
+        user.setValidationImagePath(fileStorageService.getFilePath(filename).toString());
+
+        return userRepository.save(user);
+    }
+
+    // Get validation image
+    public byte[] getValidationImage(Long userId) throws IOException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        if (user.getValidationImageName() == null) {
+            throw new RuntimeException("No validation image found for user");
+        }
+
+        return fileStorageService.loadFileAsBytes(user.getValidationImageName());
+    }
+
+    // Validate user account (admin function)
+    public User validateUserAccount(Long userId ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+
+        user.setAccountValidated(ValidationStatus.APPROVED);
+
+        return userRepository.save(user);
+    }
 
 }

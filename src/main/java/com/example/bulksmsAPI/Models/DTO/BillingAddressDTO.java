@@ -25,13 +25,6 @@ public class BillingAddressDTO {
     @JsonIgnore
     private Long user;
 
-    public BillingAddressDTO(String addressLine1, String addressLine2, String city, String state, String zipCode) {
-        this.addressLine1 = addressLine1;
-        this.addressLine2 = addressLine2;
-        this.city = city;
-        this.state = state;
-        this.zipCode = zipCode;
-        this.country = country;
 
-    }
+
 }

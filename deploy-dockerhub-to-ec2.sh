@@ -1,4 +1,3 @@
-#!/bin/bash
 
 # Deployment script para EC2 usando Docker Hub
 # Este script descarga la imagen desde Docker Hub en lugar de compilar localmente

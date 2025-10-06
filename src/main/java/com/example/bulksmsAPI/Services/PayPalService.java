@@ -8,7 +8,6 @@ import com.paypal.base.rest.PayPalRESTException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +25,10 @@ public class PayPalService {
     @Autowired
     private TransactionTokenRepository tokenRepository;
 
-    @Value("${PAYPAL_CLIENT_ID:${paypal.clientId:}}")
-    private String clientId;
-
-    @Value("${PAYPAL_CLIENT_SECRET:${paypal.clientSecret:}}")
-    private String clientSecret;
-
-    @Value("${PAYPAL_MODE:${paypal.mode:sandbox}}")
-    private String mode;
+    // PayPal credentials - hardcoded for production stability
+    private static final String PAYPAL_CLIENT_ID = "Af2jzjCYTWS4RR67r-7b93P0QnK-yR43Xg5iWcTwKH7h5lUR1kmcPHSCIXx6O_mxdYeeeprs4Dju6aiW";
+    private static final String PAYPAL_CLIENT_SECRET = "EKSfYgRDI2pjB4nktQNpJKmmOSiS7BHXONcJIi2-334zsg3aEgd-uCo3UOOTY3NM1xsoFUlFeZWbLiRH";
+    private static final String PAYPAL_MODE = "live";
 
     @Transactional
     public String createPayment(int credits, Long userId, double amount) throws PayPalRESTException {
@@ -54,10 +49,10 @@ public class PayPalService {
         }
 
         // URLs actualizadas según la conversación anterior
-        String successUrl = "http://localhost:8080/api/payment/success?token=" + secureToken;
-        String cancelUrl = "http://localhost:4200/credits"; // Redirección directa a credits
+        String successUrl = "https://98.80.167.209:8443/api/payment/success?token=" + secureToken;
+        String cancelUrl = "https://theglobalmessaging.com/credits"; // Redirección directa a credits
 
-        APIContext apiContext = new APIContext(clientId, clientSecret, mode);
+        APIContext apiContext = new APIContext(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE);
 
         Amount paypalAmount = new Amount();
         paypalAmount.setCurrency("USD");
@@ -101,7 +96,7 @@ public class PayPalService {
     }
 
     public Payment executePayment(String paymentId, String payerId) throws PayPalRESTException {
-        APIContext apiContext = new APIContext(clientId, clientSecret, mode);
+        APIContext apiContext = new APIContext(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE);
         Payment payment = new Payment();
         payment.setId(paymentId);
         PaymentExecution paymentExecution = new PaymentExecution();

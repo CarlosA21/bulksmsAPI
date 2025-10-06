@@ -50,9 +50,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String email = decodedJWT.getSubject();
                 String role = decodedJWT.getClaim("role").asString();
 
+                // Ensure the role has the ROLE_ prefix, but don't double-prefix it
+                String roleWithPrefix = role != null && role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                email, null, Collections.singleton(new SimpleGrantedAuthority("ROLE_" + role)));
+                                email, null, Collections.singleton(new SimpleGrantedAuthority(roleWithPrefix)));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JWTVerificationException e) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

@@ -42,6 +42,7 @@ public class ContactsService {
     public Contacts addContacts(ContactsDTO contactsDTO) {
         User user = getCurrentAuthenticatedUser();
 
+
         // Create and save the contact
         Contacts contact = new Contacts();
         contact.setUsuario(user);
@@ -90,7 +91,7 @@ public class ContactsService {
             contact.setUsuario(user);
             contact.setName(contactsDTO.getName());
             contact.setPhoneNumber(contactsDTO.getPhoneNumber());
-            contact.setGroup(contactsDTO.getGroup());
+            contact.setUsuario(user);
             contactsToSave.add(contact);
         }
 

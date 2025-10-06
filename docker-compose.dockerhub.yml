@@ -46,7 +46,7 @@ services:
       CORS_LOG_LEVEL: "WARN"
 
       # PayPal Configuration
-      PAYPAL_CLIENT_ID: "AQjGxw-GNiZRbKIVd6J_t6p5U2d8-9K8Q_ZZ7Jh9w8vGxNkYbHp3q5t2F_"
+      PAYPAL_CLIENT_ID: "AXmZKG8wynj4Y0Icu_f68I1YHzT6olqUiF_NXQL9z2YhApGGWLuZI6KhFdXgZnsa1Jsfy1vU-cOzliSi"
       PAYPAL_CLIENT_SECRET: "ELInTrRPBYSNjzp8dY8Dsdw7Mx8w7x5zr_Q79TOxNDUCZE2rrNRC0zRkXnWGk1xWXaBqVntQdFaNi5Ox"
       PAYPAL_MODE: "sandbox"
 

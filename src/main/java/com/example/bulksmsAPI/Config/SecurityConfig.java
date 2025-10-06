@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,6 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -49,11 +51,12 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/api/auth/getuserinfo/**",
                                 "/api/plans",
-                                "/api/payment/**"
-
+                                "/api/payment/**",
+                                "actauator/**"
                         ).permitAll()
                         .requestMatchers(
                             "/api/contacts/**",
+
                                 "/api/message/**",
                                 "/api/scheduled/**",
                                 "/api/billing/**",
@@ -65,9 +68,14 @@ public class SecurityConfig {
                                 "/api/auth/edit/**",
                                 "/api/auth/list",
                                 "/api/auth/delete/**",
-                                "/api/plans/**"
+                                "api/auth/createuser",
+                                "/api/auth/pending-validations",
+                                "/api/auth/validate-account/**",
+                                "/api/plans/**",
+                                "/api/payment/transactions/all",
+                                "/api/message/**"
 
-                                ).hasAuthority("ROLE_ADMIN")
+                                ).hasAnyAuthority("ROLE_ADMIN") // Solo admin
                         .anyRequest().authenticated()// Restringir acceso a admin
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Filtro JWT
@@ -94,11 +102,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200")); // Replace with your frontend origin
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://theglobalmessaging.com",
+            "https://theglobalmessaging.com",
+            "https://api.theglobalmessaging.com",
+            "http://localhost:4200",
+            "https://localhost:4200"
+        )); // Use patterns for better flexibility with credentials
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

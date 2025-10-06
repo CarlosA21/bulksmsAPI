@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Script simple para deployment en EC2
 # Ejecutar este script línea por línea en la consola EC2
 

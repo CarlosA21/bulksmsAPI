@@ -5,16 +5,12 @@ import com.example.bulksmsAPI.Models.ScheduledMessages;
 import com.example.bulksmsAPI.Repositories.CreditAccountRepository;
 import com.example.bulksmsAPI.Repositories.ScheduledMessagesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 
@@ -85,22 +81,11 @@ public class ScheduledMesssagesServices {
     public void sendScheduledMessages() {
         System.out.println("Ejecutando tarea programada para enviar mensajes...");
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        Date startTime = cal.getTime();
-
-        cal.add(Calendar.MINUTE, 1);
-        Date endTime = cal.getTime();
-
         Date now = new Date();
         System.out.println("Hora actual: " + now);
 
-
         List<ScheduledMessages> messagesToSend = scheduledMessagesRepository
                 .findByScheduledDateBeforeAndIsSentFalse(now);
-
-        RestTemplate restTemplate = new RestTemplate();
 
         for (ScheduledMessages message : messagesToSend) {
             System.out.println("Procesando mensaje ID: " + message.getId());
@@ -114,33 +99,54 @@ public class ScheduledMesssagesServices {
 
                     System.out.println("Intentando enviar a: " + receiver);
 
-                    ResponseEntity<String> response = restTemplate.getForEntity(
-                            horisenApiUrl + "?type=text&username=" + username + "&password=" + password +
-                                    "&sender=BulkTest&receiver=" + receiver + "&dcs=GSM&text=" + text +
-                                    "&dlrMask=19&dlrUrl=https://my-server.com/dlrjson.php",
+                    // Create JSON body structure
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("type", "text");
+
+                    Map<String, String> auth = new HashMap<>();
+                    auth.put("username", username);
+                    auth.put("password", password);
+                    body.put("auth", auth);
+
+                    body.put("sender", "BulkTest");
+                    body.put("receiver", receiver);
+                    body.put("dcs", "GSM");
+                    body.put("text", text);
+
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+                    ResponseEntity<String> response = new RestTemplate().postForEntity(
+                            horisenApiUrl,
+                            request,
                             String.class
                     );
 
-                    if (response.getStatusCode() == HttpStatus.OK) {
+                    System.out.println("Horisen API response: " + response.getBody());
+
+                    if (response.getStatusCode().is2xxSuccessful()) {
                         message.setSent(true);
                         message.setStatus("successful");
+                        System.out.println("SMS sent successfully.");
 
                         // Descontar créditos
                         Optional<CreditAccount> optionalCreditAccount = creditAccountRepository.findByUserId(userId);
                         if (optionalCreditAccount.isPresent()) {
                             CreditAccount creditAccount = optionalCreditAccount.get();
-                            Long updatedCredits = creditAccount.getBalance() - creditValue;
-                            creditAccount.setBalance(Math.toIntExact(updatedCredits));
+                            long updatedCredits = creditAccount.getBalance() - creditValue;
+                            creditAccount.setBalance((int) updatedCredits);
                             creditAccountRepository.save(creditAccount);
                         } else {
                             message.setStatus("credit_not_found");
                         }
                     } else {
                         message.setStatus("api_failed");
+                        System.out.println("SMS sending failed.");
                     }
                 } catch (Exception e) {
                     message.setStatus("exception_failed");
-                    System.out.println("Error: " + e.getMessage());
+                    System.out.println("SMS sending failed. Exception: " + e.getMessage());
                     e.printStackTrace();
                 }
 

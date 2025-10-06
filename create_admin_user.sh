@@ -25,11 +25,14 @@ cat > /tmp/create_admin.sql << 'EOF'
 USE bulksmsdb;
 
 -- Insertar usuario administrador
+INSERT INTO User (
     username,
     email,
     password,
     roles,
     driver_license,
+    dob,
+    secretKey
 )
 VALUES (
     'admin',
@@ -37,10 +40,16 @@ VALUES (
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
     'ROLE_ADMIN',
     'ENCRYPTED_DL_123456789',
+    '1990-01-01',
+    'admin-secret-key-2024'
 );
 
 -- Crear cuenta de crédito para el usuario admin
+INSERT INTO credit_account (user_id, balance, currency)
 VALUES (
+    (SELECT user_id FROM User WHERE username = 'admin'),
+    1000.00,
+    'USD'
 );
 
 -- Crear dirección de facturación para el usuario admin
@@ -53,6 +62,7 @@ INSERT INTO billing_address (
     country
 )
 VALUES (
+    (SELECT user_id FROM User WHERE username = 'admin'),
     'Admin Street 123',
     'Admin City',
     'Admin State',
@@ -62,17 +72,20 @@ VALUES (
 
 -- Verificar que se creó el usuario correctamente
 SELECT 'Usuario creado:' as info;
+SELECT user_id, username, email, roles, dob FROM User WHERE username = 'admin';
 
 -- Verificar la cuenta de crédito
 SELECT 'Cuenta de crédito:' as info;
 SELECT ca.*, u.username
 FROM credit_account ca
+JOIN User u ON ca.user_id = u.user_id
 WHERE u.username = 'admin';
 
 -- Verificar la dirección de facturación
 SELECT 'Dirección de facturación:' as info;
 SELECT ba.*, u.username
 FROM billing_address ba
+JOIN User u ON ba.user_id = u.user_id
 WHERE u.username = 'admin';
 EOF
 
@@ -86,6 +99,7 @@ if [ $? -eq 0 ]; then
     echo "✅ USUARIO ADMINISTRADOR CREADO EXITOSAMENTE"
     echo ""
     echo "=== CREDENCIALES DEL ADMIN ==="
+    echo "Username: admin"
     echo "Email: admin@bulksms.com"
     echo "Password: password"
     echo "Role: ROLE_ADMIN"

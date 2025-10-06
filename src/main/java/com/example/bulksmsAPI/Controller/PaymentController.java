@@ -99,7 +99,7 @@ public class PaymentController {
 
         Optional<TransactionToken> optionalToken = tokenRepository.findByTokenAndUsedFalse(cleanToken);
         if (optionalToken.isEmpty()) {
-            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+            String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                     "?status=error&message=" + URLEncoder.encode("Invalid or expired token", "UTF-8");
             response.sendRedirect(redirectUrl);
             return;
@@ -107,7 +107,7 @@ public class PaymentController {
 
         TransactionToken transactionToken = optionalToken.get();
         if (transactionToken.getExpiry().isBefore(Instant.now())) {
-            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+            String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                     "?status=error&message=" + URLEncoder.encode("Token expired", "UTF-8");
             response.sendRedirect(redirectUrl);
             return;
@@ -115,7 +115,7 @@ public class PaymentController {
 
         User user = userService.getUserById(transactionToken.getUserId());
         if (user == null) {
-            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+            String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                     "?status=error&message=" + URLEncoder.encode("User not found", "UTF-8");
             response.sendRedirect(redirectUrl);
             return;
@@ -151,7 +151,7 @@ public class PaymentController {
                 tokenRepository.save(transactionToken);
 
                 // Redirect to success callback
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?token=" + cleanToken +
                         "&paymentId=" + paymentId +
                         "&PayerID=" + PayerID +
@@ -161,13 +161,13 @@ public class PaymentController {
                 response.sendRedirect(redirectUrl);
 
             } else {
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?status=error&message=" + URLEncoder.encode("Payment not approved", "UTF-8");
                 response.sendRedirect(redirectUrl);
             }
 
         } catch (PayPalRESTException e) {
-            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+            String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                     "?status=error&message=" + URLEncoder.encode("Error processing payment: " + e.getMessage(), "UTF-8");
             response.sendRedirect(redirectUrl);
         }

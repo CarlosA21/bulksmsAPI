@@ -1,10 +1,13 @@
 package com.example.bulksmsAPI.Models.DTO;
 
+import com.example.bulksmsAPI.Models.ValidationStatus;
+
 public class AuthResponse {
     private String token;
     private String username;
     private String userId;
     private String Role;
+    private ValidationStatus accountValidated;
     private String message;
     private String secretKey; // New field for the secret key
 // Nuevo campo para el mensaje
@@ -13,11 +16,11 @@ public class AuthResponse {
     // Default constructor (needed by Jackson for deserialization)
     public AuthResponse() {}
 
-    public AuthResponse(String token, String username, String userId, String Role, String secretKey) {
+    public AuthResponse(String token, String username, String userId, String Role,  ValidationStatus validationStatus, String secretKey) {
         this.token = token;
         this.username = username;
         this.userId = userId;
-
+        this.accountValidated = validationStatus;
         this.Role = Role;
         this.secretKey = secretKey; // Initialize the secret key
 
@@ -65,5 +68,13 @@ public class AuthResponse {
     }
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public ValidationStatus getAccountValidated() {
+        return accountValidated;
+    }
+
+    public void setAccountValidated(ValidationStatus accountValidated) {
+        this.accountValidated = accountValidated;
     }
 }

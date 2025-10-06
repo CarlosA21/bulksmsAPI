@@ -1,6 +1,7 @@
 package com.example.bulksmsAPI.Models.DTO;
 
 import com.example.bulksmsAPI.Models.User;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,11 +13,12 @@ public class ContactsDTO {
 
     private String name;
 
+    @JsonProperty("phone_number")
     private String phoneNumber;
 
     private String group;
 
-    private Long userId; // Replace UserDTO with Long
+    private Long userId; // Changed from User to Long
 
 
     public String getName() {
@@ -43,5 +45,11 @@ public class ContactsDTO {
         this.group = group;
     }
 
+    public Long getUserId() {
+        return userId;
+    }
 
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 }

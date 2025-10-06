@@ -3,11 +3,10 @@ package com.example.bulksmsAPI.Controller;
 // ... other imports
 
 import com.example.bulksmsAPI.Models.BillingAddress;
-import com.example.bulksmsAPI.Models.DTO.AuthResponse;
-import com.example.bulksmsAPI.Models.DTO.BillingAddressDTO;
-import com.example.bulksmsAPI.Models.DTO.UserDTO;
+import com.example.bulksmsAPI.Models.DTO.*;
 import com.example.bulksmsAPI.Models.User;
 import com.example.bulksmsAPI.Models.UserResponse;
+import com.example.bulksmsAPI.Models.ValidationStatus;
 import com.example.bulksmsAPI.Security.JwtUtil;
 import com.example.bulksmsAPI.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,18 +43,28 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserDTO registrationRequest) {
-        BillingAddress billingAddress = registrationRequest.getBillingAddress();
-        User user = userService.registerUser(
-                registrationRequest.getEmail(),
-                registrationRequest.getPassword(),
-                registrationRequest.getDriverLicense(),
-                billingAddress
-        );
-        String token = jwtUtil.generateToken(user);
-        String username = user.getUsername();
-        String userID = String.valueOf(user.getId());
-        String Role = String.valueOf(user.getRoles());
-        return ResponseEntity.ok(new AuthResponse(token, username, userID,  Role, user.getSecretKey()));
+        try {
+            BillingAddress billingAddress = registrationRequest.getBillingAddress();
+            User user = userService.registerUser(
+                    registrationRequest.getEmail(),
+                    registrationRequest.getPassword(),
+                    registrationRequest.getDriverLicense(), // Mantener compatibilidad
+                    billingAddress,
+                    registrationRequest.getLegalIdType(),
+                    registrationRequest.getLegalIdNumber()
+            );
+            String token = jwtUtil.generateToken(user);
+            String username = user.getUsername();
+            String userID = String.valueOf(user.getId());
+            ValidationStatus accountValidated = ValidationStatus.PENDING;
+
+            String Role = String.valueOf(user.getRoles());
+            return ResponseEntity.ok(new AuthResponse(token, username, userID, Role, accountValidated,  user.getSecretKey()));
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
     }
 
     @PostMapping("/login")
@@ -79,6 +88,7 @@ public class AuthController {
                     user.getUsername(),
                     String.valueOf(user.getId()),
                     user.getRoles(),
+                    user.getAccountValidated(),
                     user.getSecretKey()
             );
 
@@ -100,22 +110,34 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> request) {
         try {
-            String idToken = request.get("idToken");
-            if (idToken == null || idToken.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Missing idToken");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            String idToken = Optional.ofNullable(request.get("idToken"))
+                    .or(() -> Optional.ofNullable(request.get("token")))
+                    .or(() -> Optional.ofNullable(request.get("id_token")))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .orElse(null);
+
+            if (idToken == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Missing idToken"));
             }
 
+            // Truncated safe logging
+            try {
+                String trunc = idToken.length() > 30 ? idToken.substring(0, 30) + "..." : idToken;
+                System.out.println("googleLogin - received idToken (truncated): " + trunc);
+            } catch (Exception ignored) {}
+
             AuthResponse authResponse = userService.googleAuthUser(idToken);
-
-
+            if (authResponse == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid Google ID Token"));
+            }
             return ResponseEntity.ok(authResponse);
 
         } catch (RuntimeException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -198,7 +220,8 @@ public class AuthController {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getDriverLicense()
+                user.getLegalIdNumber(),
+                user.getAccountValidated()
         );
 
         return ResponseEntity.ok(dto);
@@ -224,11 +247,27 @@ public class AuthController {
         }
         try {
             User user = userService.createUser(email, password, roles);
-            return ResponseEntity.status(HttpStatus.CREATED).body(user);
+            UserResponseDTO userDTO = new UserResponseDTO(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(userDTO);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
+    @PostMapping("/createuser")
+    public ResponseEntity<?> createUser(@RequestBody profileDTO profileRequest) {
+        if (!isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied: Admin role required.");
+        }
+        try {
+            User user = userService.createProfile(profileRequest);
+            UserResponseDTO userDTO = new UserResponseDTO(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(userDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
     // Edit user details
     @PutMapping("/edit/{userId}")
     public ResponseEntity<?> editUser(@PathVariable Long userId,
@@ -238,7 +277,8 @@ public class AuthController {
                                       @RequestParam(required = false) String roles) {
         try {
             User updatedUser = userService.editUser(userId, email, password, driverLicense, roles);
-            return ResponseEntity.ok(updatedUser);
+            UserResponseDTO userDTO = new UserResponseDTO(updatedUser);
+            return ResponseEntity.ok(userDTO);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -246,9 +286,12 @@ public class AuthController {
 
     // List all users
     @GetMapping("/list")
-    public ResponseEntity<List<User>> listUsers() {
+    public ResponseEntity<List<UserResponseDTO>> listUsers() {
         List<User> users = userService.listUsers();
-        return ResponseEntity.ok(users);
+        List<UserResponseDTO> userDTOs = users.stream()
+                .map(UserResponseDTO::new)
+                .toList();
+        return ResponseEntity.ok(userDTOs);
     }
 
     // Delete user by ID
@@ -259,6 +302,80 @@ public class AuthController {
             return ResponseEntity.ok("User deleted successfully");
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    // Upload validation image
+    @PostMapping("/upload-validation-image/{userId}")
+    public ResponseEntity<?> uploadValidationImage(
+            @PathVariable Long userId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            User updatedUser = userService.uploadValidationImage(userId, file);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Validation image uploaded successfully");
+            response.put("imageName", updatedUser.getValidationImageName());
+            response.put("accountValidated", updatedUser.getAccountValidated());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    // Get validation image
+    @GetMapping("/validation-image/{userId}")
+    public ResponseEntity<byte[]> getValidationImage(@PathVariable Long userId) {
+        try {
+            byte[] imageBytes = userService.getValidationImage(userId);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "image/jpeg")
+                    .body(imageBytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    // Validate user account (admin only)
+    @PostMapping("/validate-account/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> validateUserAccount(
+            @PathVariable Long userId,
+            @RequestParam boolean validated) {
+        try {
+            if (!isAdmin()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied: Admin role required.");
+            }
+            User updatedUser = userService.validateUserAccount(userId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User account validation status updated");
+            response.put("userId", updatedUser.getId());
+            response.put("accountValidated", updatedUser.getAccountValidated());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+
+
+    // Get all pending validation users (admin only)
+    @GetMapping("/pending-validations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getPendingValidations() {
+        try {
+            if (!isAdmin()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied: Admin role required.");
+            }
+            List<com.example.bulksmsAPI.Models.DTO.PendingUserValidationDTO> pendingUsers = userService.getPendingValidationUsers();
+            return ResponseEntity.ok(pendingUsers);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 

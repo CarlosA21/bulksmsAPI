@@ -88,13 +88,13 @@ public class StripeService {
                             .build();
 
             // URLs actualizadas para coincidir con PayPal
-            String successUrl = "http://localhost:8000/api/payment/stripe-success" +
+            String successUrl = "https://98.80.167.209:8443/api/payment/stripe-success" +
                     "?token=" + secureToken +
                     "&userId=" + userId +
                     "&credits=" + planRequest.getCredits() +
                     "&session_id={CHECKOUT_SESSION_ID}";
 
-            String cancelUrl = "http://localhost:4200/credits";
+            String cancelUrl = "https://theglobalmessaging/credits";
 
             // Create Stripe checkout session
             SessionCreateParams params =
@@ -133,7 +133,7 @@ public class StripeService {
             // Verificar el token en la base de datos (similar a PayPal)
             Optional<TransactionToken> optionalToken = tokenRepository.findByTokenAndUsedFalse(token);
             if (optionalToken.isEmpty()) {
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?status=error&message=" + URLEncoder.encode("Invalid or expired token", "UTF-8") +
                         "&provider=stripe";
                 response.sendRedirect(redirectUrl);
@@ -142,7 +142,7 @@ public class StripeService {
 
             TransactionToken transactionToken = optionalToken.get();
             if (transactionToken.getExpiry().isBefore(Instant.now())) {
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?status=error&message=" + URLEncoder.encode("Token expired", "UTF-8") +
                         "&provider=stripe";
                 response.sendRedirect(redirectUrl);
@@ -161,7 +161,7 @@ public class StripeService {
                 tokenRepository.save(transactionToken);
 
                 // Redireccionar con los parámetros adaptados para coincidir con PayPal
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?token=" + token +
                         "&paymentId=" + sessionId +
                         "&PayerID=" + (session.getCustomer() != null ? session.getCustomer() : "stripe_customer") +
@@ -171,7 +171,7 @@ public class StripeService {
 
                 response.sendRedirect(redirectUrl);
             } else {
-                String redirectUrl = "http://localhost:4200/payment-success-callback" +
+                String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                         "?status=error" +
                         "&message=" + URLEncoder.encode("Payment not completed", "UTF-8") +
                         "&provider=stripe";
@@ -179,7 +179,7 @@ public class StripeService {
             }
 
         } catch (StripeException e) {
-            String redirectUrl = "http://localhost:4200/payment-success-callback" +
+            String redirectUrl = "https://theglobalmessaging.com/payment-success-callback" +
                     "?status=error" +
                     "&message=" + URLEncoder.encode("Error verifying payment: " + e.getMessage(), "UTF-8") +
                     "&provider=stripe";

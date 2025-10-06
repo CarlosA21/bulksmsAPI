@@ -32,9 +32,22 @@ public class User implements UserDetails {
     private String password;
     private String roles;
 
-    @Column(name = "driver_license", nullable = false)
-    private String driverLicense;
-    private Date dob;
+    @Column(name = "legal_id_type")
+    @Enumerated(EnumType.STRING)
+    private LegalIdType legalIdType;
+
+    @Column(name = "legal_id_number")
+    private String legalIdNumber;
+
+
+    @Column(name = "validation_image_path")
+    private String validationImagePath;
+
+    @Column(name = "validation_image_name")
+    private String validationImageName;
+
+    @Column(name = "account_validated")
+    private ValidationStatus accountValidated ;
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
@@ -54,14 +67,14 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Return the user's authorities (roles/permissions).  This is crucial.
-        // Example using a simple role:
-        return Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")); // Or get from your database.
-        // Or, if you have multiple roles:
-        // List<GrantedAuthority> authorities = new ArrayList<>();
-        // authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-        // if (isAdmin) { authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); }
-        // return authorities;
+        // Use the actual roles field from the database
+        if (roles != null && !roles.isEmpty()) {
+            // If the role already has ROLE_ prefix, use it as is, otherwise add the prefix
+            String roleWithPrefix = roles.startsWith("ROLE_") ? roles : "ROLE_" + roles;
+            return Collections.singleton(new SimpleGrantedAuthority(roleWithPrefix));
+        }
+        // Default fallback if no role is set
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
@@ -95,21 +108,6 @@ public class User implements UserDetails {
     }
 
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 
     public List<Contacts> getContactos() {
         return contacts;
@@ -134,43 +132,9 @@ public class User implements UserDetails {
         creditAccount.setUser(this);
     }
 
-    public String getDriverLicense() {
-        try {
-            return EncryptionUtil.decrypt(this.driverLicense);
-        } catch (Exception e) {
-            throw new RuntimeException("Error decrypting driver license", e);
-        }
-    }
 
-    public void setDriverLicense(String driverLicense) {
-        try {
-            this.driverLicense = EncryptionUtil.encrypt(driverLicense);
-        } catch (Exception e) {
-            throw new RuntimeException("Error encrypting driver license", e);
-        }
-    }
 
-    public BillingAddress getBillingAddress() {
-        return billingAddress;
-    }
 
-    public void setBillingAddress(BillingAddress billingAddress) {
-        this.billingAddress = billingAddress;
-    }
 
-    public String getSecretKey() {
-        return secretKey;
-    }
-
-    public void setSecretKey(String secretKey) {
-        this.secretKey = secretKey;
-    }
-
-    public Date getDob() {
-        return dob;
-    }
-    public void setDob(Date dob) {
-        this.dob = dob;
-    }
 
 }
