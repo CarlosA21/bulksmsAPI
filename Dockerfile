@@ -34,6 +34,10 @@ COPY --from=build /app/target/bulksmsAPI-*.jar app.jar
 # Copy the production environment file
 COPY .env.production .env.production
 
+# Create uploads directory for validation images
+RUN mkdir -p /app/uploads/validation-images && \
+    chown -R spring:spring /app/uploads
+
 # Change ownership to the spring user
 RUN chown spring:spring app.jar .env.production
 

@@ -64,7 +64,7 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private ResetTokenRepository resetTokenRepository;
-    private final String FRONTEND_URL = "http://localhost:4200/reset-password";
+    private final String FRONTEND_URL = "https://theglobalmessaging.com/reset-password";
 
 
 

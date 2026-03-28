@@ -159,7 +159,7 @@ public class AuthController {
     public ResponseEntity<?> requestPasswordReset(@RequestParam String email) {
         try {
             String resetToken = userService.createResetToken(email);
-            String resetLink = "http://localhost:4200/reset-password?token=" + resetToken;
+            String resetLink = "https://theglobalmessaging.com/reset-password?token=" + resetToken;
 
             // Usa el servicio para enviar el correo
             emailService.sendPasswordResetEmail(email, resetLink);
